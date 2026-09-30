@@ -27,7 +27,7 @@ export default function LeadsList() {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold dark:text-white">Leads</h1>
         <div className="flex items-center space-x-2">
-          {filtersData && filtersData.length > 0 && (
+          {Array.isArray(filtersData) && filtersData.length > 0 && (
             <select 
               value={activeFilterId}
               onChange={(e) => setActiveFilterId(e.target.value)}

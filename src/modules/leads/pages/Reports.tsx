@@ -61,8 +61,8 @@ export default function ReportsDashboard() {
         <ChartCard title="Leads by Source">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={sourceData} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label>
-                {sourceData.map((_entry: any, index: number) => (
+              <Pie data={Array.isArray(sourceData) ? sourceData : []} cx="50%" cy="50%" outerRadius={80} fill="#8884d8" dataKey="value" label>
+                {Array.isArray(sourceData) && sourceData.map((_entry: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

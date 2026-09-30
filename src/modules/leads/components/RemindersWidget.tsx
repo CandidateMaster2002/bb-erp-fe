@@ -18,7 +18,7 @@ export default function RemindersWidget() {
   }, [count]);
 
   useEffect(() => {
-    if (dueNow && dueNow.length > 0) {
+    if (Array.isArray(dueNow) && dueNow.length > 0) {
       dueNow.forEach(item => {
         if (!notifiedIds.has(item.id)) {
           // Native browser notification if permitted
@@ -58,8 +58,8 @@ export default function RemindersWidget() {
               <p className="text-center text-sm text-gray-500 dark:text-gray-400 p-4">All caught up!</p>
             ) : (
               <>
-                {summary.overdue.map(item => <ReminderCard key={item.id} item={item} isOverdue />)}
-                {summary.dueToday.map(item => <ReminderCard key={item.id} item={item} />)}
+                {Array.isArray(summary?.overdue) && summary.overdue.map(item => <ReminderCard key={item.id} item={item} isOverdue />)}
+                {Array.isArray(summary?.dueToday) && summary.dueToday.map(item => <ReminderCard key={item.id} item={item} />)}
               </>
             )}
           </div>
@@ -68,7 +68,7 @@ export default function RemindersWidget() {
 
       {/* Due Now Floating Toasts */}
       <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-8 md:bottom-8 z-50 space-y-2 pointer-events-none">
-        {dueNow?.map(item => (
+        {Array.isArray(dueNow) && dueNow.map(item => (
            <ReminderToast key={item.id} item={item} />
         ))}
       </div>
