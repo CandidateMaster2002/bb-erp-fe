@@ -13,6 +13,9 @@ export interface Lead {
   fullName: string;
   phone: string;
   company?: string;
+  jobTitle?: string;
+  linkedinUrl?: string;
+  profilePictureUrl?: string;
   categoryId: string;
   categoryName?: string;
   stageName: LeadStage;

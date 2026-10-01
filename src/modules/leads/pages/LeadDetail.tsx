@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLeadDetail } from '../api/queries';
-import { Phone, MessageCircle, MoreVertical, ArrowLeft } from 'lucide-react';
+import { Phone, MessageCircle, MoreVertical, ArrowLeft, Linkedin } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
+
+const getInitials = (name?: string) => {
+  if (!name) return '?';
+  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -19,14 +24,38 @@ export default function LeadDetail() {
     <div className="bg-gray-50 dark:bg-zinc-900 min-h-full pb-24">
       {/* Header */}
       <div className="bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
-        <div className="p-4 flex items-center justify-between">
-          <Link to="/leads" className="mr-2 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition">
+        <div className="p-4 flex items-start gap-4">
+          <Link to="/leads" className="mt-1 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition flex-shrink-0">
             <ArrowLeft className="w-5 h-5 dark:text-gray-200" />
           </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold truncate dark:text-white">{lead.fullName}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{lead.company}</p>
+
+          {lead.profilePictureUrl ? (
+            <img src={lead.profilePictureUrl} alt={lead.fullName} className="w-16 h-16 rounded-full object-cover border border-gray-200 dark:border-zinc-700 flex-shrink-0" />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xl flex-shrink-0">
+              {getInitials(lead.fullName)}
+            </div>
+          )}
+          
+          <div className="flex-1 min-w-0 pt-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-xl font-bold truncate dark:text-white">{lead.fullName}</h1>
+              {lead.linkedinUrl && (
+                <a href={lead.linkedinUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+              )}
+              <span className="text-sm text-gray-400 dark:text-gray-500">#{lead.id}</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+              {lead.jobTitle ? `${lead.jobTitle} at ` : ''}{lead.company || 'Unknown Company'}
+            </p>
+            <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <Phone className="w-4 h-4" />
+              <span>{lead.phone || 'No phone'}</span>
+            </div>
           </div>
+          
           <div className="flex space-x-2">
             <button className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-full transition">
               <MoreVertical className="w-5 h-5" />
