@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLeadDetail } from '../api/queries';
-import { Phone, MessageCircle, MoreVertical, ArrowLeft, Linkedin } from 'lucide-react';
+import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 
 const getInitials = (name?: string) => {
@@ -42,7 +42,7 @@ export default function LeadDetail() {
               <h1 className="text-xl font-bold truncate dark:text-white">{lead.fullName}</h1>
               {lead.linkedinUrl && (
                 <a href={lead.linkedinUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                  <Linkedin className="w-5 h-5" />
+                  <Link2 className="w-5 h-5" />
                 </a>
               )}
               <span className="text-sm text-gray-400 dark:text-gray-500">#{lead.id}</span>

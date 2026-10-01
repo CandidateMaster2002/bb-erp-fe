@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Linkedin, Phone } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 
@@ -101,7 +101,7 @@ export default function LeadsList() {
                         <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
                         {lead.linkedinUrl && (
                           <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                            <Linkedin className="w-4 h-4" />
+                            <Link2 className="w-4 h-4" />
                           </button>
                         )}
                         <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
