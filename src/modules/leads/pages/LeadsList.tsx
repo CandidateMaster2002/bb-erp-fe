@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList } from '../api/queries';
+import { useLeadsList, useStages, useCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
 import { Search, Filter, Save, Trash2, Link2, Phone } from 'lucide-react';
 import { format } from 'date-fns';
@@ -15,6 +15,15 @@ export default function LeadsList() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('');
   
+  // New filter states
+  const [hasMobileNo, setHasMobileNo] = useState(false);
+  const [selectedStageId, setSelectedStageId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+
+  // Fetch filter options
+  const { data: stages } = useStages();
+  const { data: categories } = useCategories();
+  
   // Debounce the search input by 500ms
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
@@ -25,7 +34,17 @@ export default function LeadsList() {
   const saveFilterMutation = useSaveFilter();
   const deleteFilterMutation = useDeleteFilter();
   
-  const { data, isLoading } = useLeadsList({ search: debouncedSearch, filterId: activeFilterId });
+  const currentFilters: any = {};
+  if (debouncedSearch) {
+    currentFilters.q = debouncedSearch;
+    currentFilters.search = debouncedSearch; // pass both just in case backend expects the old one
+  }
+  if (hasMobileNo) currentFilters.hasMobileNo = true;
+  if (selectedStageId) currentFilters.stageId = selectedStageId;
+  if (selectedCategoryId) currentFilters.categoryId = selectedCategoryId;
+  if (activeFilterId) currentFilters.filterId = activeFilterId;
+
+  const { data, isLoading } = useLeadsList(currentFilters);
 
   const handleSaveFilter = () => {
     const name = prompt('Enter a name for this filter:');
@@ -65,7 +84,7 @@ export default function LeadsList() {
         </div>
       </div>
 
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <Search className="h-5 w-5 text-gray-400" />
         </div>
@@ -76,6 +95,43 @@ export default function LeadsList() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+      </div>
+
+      {/* Filter Controls */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm">
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={hasMobileNo}
+            onChange={(e) => setHasMobileNo(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          Has Mobile No
+        </label>
+
+        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-600 hidden sm:block"></div>
+
+        <select
+          value={selectedStageId}
+          onChange={(e) => setSelectedStageId(e.target.value)}
+          className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="">All Stages</option>
+          {stages?.map(stage => (
+            <option key={stage.id} value={stage.id}>{stage.name}</option>
+          ))}
+        </select>
+
+        <select
+          value={selectedCategoryId}
+          onChange={(e) => setSelectedCategoryId(e.target.value)}
+          className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          <option value="">All Categories</option>
+          {categories?.map(category => (
+            <option key={category.id} value={category.id}>{category.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 pb-24">

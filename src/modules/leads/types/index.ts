@@ -8,6 +8,11 @@ export interface Category {
   children?: Category[];
 }
 
+export interface Stage {
+  id: string | number;
+  name: string;
+}
+
 export interface Lead {
   id: string;
   fullName: string;

@@ -9,6 +9,28 @@ export const leadsKeys = {
   details: () => [...leadsKeys.all, 'detail'] as const,
   detail: (id: string) => [...leadsKeys.details(), id] as const,
   today: () => ['today-dashboard'] as const,
+  stages: () => ['stages'] as const,
+  categories: () => ['categories'] as const,
+};
+
+export const useStages = () => {
+  return useQuery({
+    queryKey: leadsKeys.stages(),
+    queryFn: async () => {
+      const { data } = await api.get('/stages');
+      return data as { id: string | number, name: string }[];
+    },
+  });
+};
+
+export const useCategories = () => {
+  return useQuery({
+    queryKey: leadsKeys.categories(),
+    queryFn: async () => {
+      const { data } = await api.get('/categories');
+      return data as { id: string | number, name: string }[];
+    },
+  });
 };
 
 // MOCK APIs (replace with actual backend paths)
