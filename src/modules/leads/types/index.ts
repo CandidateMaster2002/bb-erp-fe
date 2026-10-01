@@ -2,7 +2,7 @@ export type LeadStage = 'New' | 'Contacted' | 'Qualified' | 'Proposal' | 'Negoti
 export type LeadPriority = 'HOT' | 'WARM' | 'COLD';
 
 export interface Category {
-  id: string;
+  id: string | number;
   name: string;
   parentId?: string;
   children?: Category[];
@@ -11,7 +11,7 @@ export interface Category {
 export interface Lead {
   id: string;
   fullName: string;
-  phone: string;
+  mobileNumber?: string;
   company?: string;
   jobTitle?: string;
   linkedinUrl?: string;

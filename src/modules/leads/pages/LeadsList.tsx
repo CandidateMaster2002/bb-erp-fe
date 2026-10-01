@@ -112,13 +112,15 @@ export default function LeadsList() {
                     </div>
                     
                     <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {lead.jobTitle ? `${lead.jobTitle} at ` : ''}{lead.company || 'Unknown Company'}
+                      {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
                     </p>
                     
-                    <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      <Phone className="w-3 h-3" />
-                      <span>{lead.phone || 'No phone'}</span>
-                    </div>
+                    {lead.mobileNumber && (
+                      <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <Phone className="w-3 h-3" />
+                        <span>{lead.mobileNumber}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2 flex-wrap text-xs pl-[60px]">

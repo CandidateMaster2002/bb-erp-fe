@@ -48,12 +48,14 @@ export default function LeadDetail() {
               <span className="text-sm text-gray-400 dark:text-gray-500">#{lead.id}</span>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-              {lead.jobTitle ? `${lead.jobTitle} at ` : ''}{lead.company || 'Unknown Company'}
+              {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
             </p>
-            <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-              <Phone className="w-4 h-4" />
-              <span>{lead.phone || 'No phone'}</span>
-            </div>
+            {lead.mobileNumber && (
+              <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <Phone className="w-4 h-4" />
+                <span>{lead.mobileNumber}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex space-x-2">
@@ -84,14 +86,16 @@ export default function LeadDetail() {
             </span>
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <a href={`tel:${lead.phone}`} className="flex-1 flex justify-center items-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition">
-              <Phone className="w-4 h-4" /> Call
-            </a>
-            <a href={`https://wa.me/${lead.phone?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition">
-              <MessageCircle className="w-4 h-4" /> WhatsApp
-            </a>
-          </div>
+          {lead.mobileNumber && (
+            <div className="flex gap-2 pt-1">
+              <a href={`tel:${lead.mobileNumber}`} className="flex-1 flex justify-center items-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition">
+                <Phone className="w-4 h-4" /> Call
+              </a>
+              <a href={`https://wa.me/${lead.mobileNumber?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition">
+                <MessageCircle className="w-4 h-4" /> WhatsApp
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -120,7 +124,7 @@ export default function LeadDetail() {
         {activeTab === 'details' && (
           <div className="space-y-4">
              <div className="p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 space-y-3">
-               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Phone:</span> <p className="dark:text-white">{lead.phone}</p></div>
+               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Phone:</span> <p className="dark:text-white">{lead.mobileNumber}</p></div>
                <div><span className="text-gray-500 dark:text-gray-400 text-sm">Notes:</span> <p className="dark:text-white">{lead.remark || 'N/A'}</p></div>
              </div>
           </div>

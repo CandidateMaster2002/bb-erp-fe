@@ -39,6 +39,8 @@ fs.createReadStream('data.csv')
       fullName: row.full_name || `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unknown',
       company: row.company || 'Unknown',
       jobTitle: row.job_title || '',
+      linkedinUrl: row.linkedin_url || '',
+      profilePictureUrl: row.profile_picture_url || '',
       email: row.personal_email || row.work_email || '',
       phone: row.mobile_number || row.assumed_mobile_no || null,
       stage: 'New',          // Default stage
