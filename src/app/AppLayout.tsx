@@ -13,6 +13,30 @@ const MODULES_NAV = [
   { name: 'More', path: '/more', icon: MoreHorizontal },
 ];
 
+const DevBackendToggle = () => {
+  if (!import.meta.env.DEV) return null;
+  const isLocal = localStorage.getItem('backend_target') === 'local';
+  
+  const toggle = () => {
+    localStorage.setItem('backend_target', isLocal ? 'deployed' : 'local');
+    window.location.reload();
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+        isLocal 
+          ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+          : 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-400 dark:border-indigo-800'
+      }`}
+      title="Toggle Backend (Local vs Deployed)"
+    >
+      {isLocal ? '🔌 Local BE' : '☁️ Prod BE'}
+    </button>
+  );
+};
+
 export default function AppLayout() {
   const token = localStorage.getItem('token');
   const location = useLocation();
@@ -68,9 +92,13 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden pb-16 md:pb-0">
         <header className="h-14 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between px-4 lg:hidden">
           <h1 className="text-lg font-bold text-blue-600 dark:text-blue-500">BB ERP</h1>
-          <RemindersWidget />
+          <div className="flex items-center gap-2">
+            <DevBackendToggle />
+            <RemindersWidget />
+          </div>
         </header>
-        <div className="hidden lg:flex h-14 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800 items-center justify-end px-4">
+        <div className="hidden lg:flex h-14 bg-white dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800 items-center justify-end px-4 gap-2">
+          <DevBackendToggle />
           <RemindersWidget />
         </div>
         <main className="flex-1 overflow-y-auto relative">

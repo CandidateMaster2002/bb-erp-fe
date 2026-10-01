@@ -1,7 +1,14 @@
 import axios from 'axios';
 
+let baseURL = import.meta.env.VITE_API_URL || 'https://bb-erp-be.onrender.com/api';
+
+if (import.meta.env.DEV) {
+  const target = localStorage.getItem('backend_target') || 'deployed';
+  baseURL = target === 'local' ? 'http://localhost:8080/api' : 'https://bb-erp-be.onrender.com/api';
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api',
+  baseURL,
 });
 
 // Attach token if available
