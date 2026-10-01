@@ -7,10 +7,10 @@ import { useAddLead } from '../api/queries';
 import { Plus, X } from 'lucide-react';
 
 const addLeadSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  fullName: z.string().min(1, 'Name is required'),
   phone: z.string().min(1, 'Phone is required'),
   categoryId: z.string().min(1, 'Category is required'),
-  notes: z.string().optional(),
+  remark: z.string().optional(),
 });
 
 type AddLeadForm = z.infer<typeof addLeadSchema>;
@@ -28,7 +28,7 @@ export default function QuickAddSheet() {
   const onSubmit = async (data: AddLeadForm) => {
     setDuplicateError(null);
     try {
-      await addLead.mutateAsync({ ...data, stage: 'New', priority: 'Medium' });
+      await addLead.mutateAsync({ ...data, stageName: 'New', priority: 'WARM' });
       reset();
       setOpen(false);
     } catch (error: any) {
@@ -70,8 +70,8 @@ export default function QuickAddSheet() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-                <input {...register('name')} className="w-full p-2 rounded-md border border-gray-300 dark:border-zinc-700 bg-transparent dark:text-white" />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+                <input {...register('fullName')} className="w-full p-2 rounded-md border border-gray-300 dark:border-zinc-700 bg-transparent dark:text-white" />
+                {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone / WhatsApp</label>
@@ -90,7 +90,7 @@ export default function QuickAddSheet() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quick Note</label>
-                <textarea {...register('notes')} rows={3} className="w-full p-2 rounded-md border border-gray-300 dark:border-zinc-700 bg-transparent dark:text-white" />
+                <textarea {...register('remark')} rows={3} className="w-full p-2 rounded-md border border-gray-300 dark:border-zinc-700 bg-transparent dark:text-white" />
               </div>
               <button 
                 type="submit" 

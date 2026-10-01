@@ -33,8 +33,8 @@ export default function TodayDashboard() {
             {newThisWeek.map(lead => (
               <div key={lead.id} className="p-3 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 flex justify-between items-center">
                 <div>
-                  <p className="font-medium dark:text-white">{lead.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{lead.categoryName} • {lead.stage}</p>
+                  <p className="font-medium dark:text-white">{lead.fullName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{lead.categoryName} • {lead.stageName}</p>
                 </div>
               </div>
             ))}

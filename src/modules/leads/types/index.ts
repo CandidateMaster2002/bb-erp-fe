@@ -1,5 +1,5 @@
 export type LeadStage = 'New' | 'Contacted' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
-export type LeadPriority = 'Low' | 'Medium' | 'High';
+export type LeadPriority = 'HOT' | 'WARM' | 'COLD';
 
 export interface Category {
   id: string;
@@ -10,15 +10,15 @@ export interface Category {
 
 export interface Lead {
   id: string;
-  name: string;
+  fullName: string;
   phone: string;
   company?: string;
   categoryId: string;
   categoryName?: string;
-  stage: LeadStage;
+  stageName: LeadStage;
   priority: LeadPriority;
   tags: string[];
-  notes: string;
+  remark: string;
   nextFollowUpDate?: string; // ISO Date
   lastContactedDate?: string; // ISO Date
   createdAt: string;
@@ -53,8 +53,9 @@ export interface Interaction {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }

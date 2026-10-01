@@ -13,6 +13,8 @@ export default function LeadDetail() {
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
 
+  const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
+
   return (
     <div className="bg-gray-50 dark:bg-zinc-900 min-h-full pb-24">
       {/* Header */}
@@ -22,7 +24,7 @@ export default function LeadDetail() {
             <ArrowLeft className="w-5 h-5 dark:text-gray-200" />
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold truncate dark:text-white">{lead.name}</h1>
+            <h1 className="text-xl font-bold truncate dark:text-white">{lead.fullName}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{lead.company}</p>
           </div>
           <div className="flex space-x-2">
@@ -35,7 +37,7 @@ export default function LeadDetail() {
         <div className="px-4 pb-4 space-y-3">
           <div className="flex flex-wrap gap-2">
             <select 
-              value={lead.stage}
+              value={lead.stageName}
               onChange={() => {}}
               className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-1 text-sm font-medium focus:outline-none"
             >
@@ -46,7 +48,7 @@ export default function LeadDetail() {
               <option value="Won">Won</option>
             </select>
             <span className="bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-md text-sm font-medium border border-gray-200 dark:border-zinc-600">
-              {lead.priority} Priority
+              {priorityLabel} Priority
             </span>
             <span className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-md text-sm font-medium border border-purple-200 dark:border-purple-800">
               {lead.categoryName}
@@ -57,7 +59,7 @@ export default function LeadDetail() {
             <a href={`tel:${lead.phone}`} className="flex-1 flex justify-center items-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition">
               <Phone className="w-4 h-4" /> Call
             </a>
-            <a href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition">
+            <a href={`https://wa.me/${lead.phone?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition">
               <MessageCircle className="w-4 h-4" /> WhatsApp
             </a>
           </div>
@@ -90,7 +92,7 @@ export default function LeadDetail() {
           <div className="space-y-4">
              <div className="p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 space-y-3">
                <div><span className="text-gray-500 dark:text-gray-400 text-sm">Phone:</span> <p className="dark:text-white">{lead.phone}</p></div>
-               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Notes:</span> <p className="dark:text-white">{lead.notes || 'N/A'}</p></div>
+               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Notes:</span> <p className="dark:text-white">{lead.remark || 'N/A'}</p></div>
              </div>
           </div>
         )}

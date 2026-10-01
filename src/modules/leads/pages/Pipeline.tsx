@@ -26,7 +26,7 @@ export default function PipelineBoard() {
       const destItems = [...destCol];
       const [removed] = sourceItems.splice(source.index, 1);
       
-      removed.stage = destination.droppableId as LeadStage; // optimistic update
+      removed.stageName = destination.droppableId as LeadStage; // optimistic update
       destItems.splice(destination.index, 0, removed);
       
       setColumns({
@@ -81,7 +81,7 @@ export default function PipelineBoard() {
                               className={`p-3 mb-2 bg-white dark:bg-zinc-800 rounded shadow-sm border border-gray-200 dark:border-zinc-700 ${snapshot.isDragging ? 'shadow-lg border-blue-300 dark:border-blue-700' : ''}`}
                               style={{ ...provided.draggableProps.style }}
                             >
-                              <h4 className="font-medium dark:text-white">{item.name}</h4>
+                              <h4 className="font-medium dark:text-white">{item.fullName}</h4>
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{item.company}</p>
                             </div>
                           )}

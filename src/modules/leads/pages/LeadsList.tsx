@@ -69,22 +69,24 @@ export default function LeadsList() {
       <div className="flex-1 overflow-y-auto space-y-3 pb-24">
         {isLoading ? (
           <div className="text-center py-4">Loading leads...</div>
-        ) : data?.data && data.data.length > 0 ? (
-          data.data.map(lead => (
+        ) : data?.content && data.content.length > 0 ? (
+          data.content.map(lead => {
+            const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
+            return (
             <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
               <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{lead.name}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{lead.fullName}</h3>
                     {lead.company && <p className="text-sm text-gray-500 dark:text-gray-400">{lead.company}</p>}
                   </div>
                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                    {lead.stage}
+                    {lead.stageName}
                   </span>
                 </div>
                 <div className="mt-3 flex gap-2 flex-wrap text-xs">
                   <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300">
-                    Priority: {lead.priority}
+                    Priority: {priorityLabel}
                   </span>
                   {lead.nextFollowUpDate && (
                     <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
@@ -99,7 +101,7 @@ export default function LeadsList() {
                 </div>
               </div>
             </Link>
-          ))
+          )})
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
             No leads found. Tap + to add one.
