@@ -1,11 +1,15 @@
 export type LeadStage = 'New' | 'Contacted' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
 export type LeadPriority = 'HOT' | 'WARM' | 'COLD';
 
-export interface Category {
+export interface CategoryValue {
   id: string | number;
   name: string;
-  parentId?: string;
-  children?: Category[];
+}
+
+export interface CategoryGroup {
+  id: string | number;
+  name: string;
+  values: CategoryValue[];
 }
 
 export interface Stage {
@@ -21,9 +25,9 @@ export interface Lead {
   jobTitle?: string;
   linkedinUrl?: string;
   profilePictureUrl?: string;
-  categoryId: string;
-  categoryName?: string;
-  stageName: LeadStage;
+  categories?: CategoryValue[];
+  stageId?: string | number;
+  stageName: string;
   priority: LeadPriority;
   tags: string[];
   remark: string;

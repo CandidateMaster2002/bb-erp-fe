@@ -1,19 +1,51 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useLeadDetail } from '../api/queries';
-import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
+import { 
+  useLeadDetail, 
+  useStages, 
+  useCategories, 
+  useUpdateLeadStage, 
+  useUpdateLeadCategories 
+} from '../api/queries';
+import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2, Plus, X } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLeadDetail(id!);
+  const { data: stages } = useStages();
+  const { data: categoryGroups } = useCategories();
+  const updateStageMutation = useUpdateLeadStage();
+  const updateCategoriesMutation = useUpdateLeadCategories();
+
   const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'followups' | 'tosend'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
 
   const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
+
+  const currentCategoryIds = lead.categories?.map(c => c.id) || [];
+
+  const handleStageChange = (stageId: string | number) => {
+    updateStageMutation.mutate({ id: lead.id, stageId });
+  };
+
+  const handleAddCategory = (valueId: string | number) => {
+    if (!currentCategoryIds.includes(valueId)) {
+      updateCategoriesMutation.mutate({ id: lead.id, categoryIds: [...currentCategoryIds, valueId] });
+    }
+    setIsAddingCategory(false);
+  };
+
+  const handleRemoveCategory = (valueId: string | number) => {
+    updateCategoriesMutation.mutate({ 
+      id: lead.id, 
+      categoryIds: currentCategoryIds.filter(id => id !== valueId)
+    });
+  };
 
   return (
     <div className="bg-gray-50 dark:bg-zinc-900 min-h-full pb-24">
@@ -53,24 +85,62 @@ export default function LeadDetail() {
         </div>
 
         <div className="px-4 pb-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
             <select 
-              value={lead.stageName}
-              onChange={() => {}}
+              value={lead.stageId || ''}
+              onChange={(e) => handleStageChange(e.target.value)}
               className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-1 text-sm font-medium focus:outline-none"
             >
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Qualified">Qualified</option>
-              <option value="Proposal">Proposal</option>
-              <option value="Won">Won</option>
+              <option value="" disabled>{lead.stageName}</option>
+              {Array.isArray(stages) && stages.map(stage => (
+                <option key={stage.id} value={stage.id}>{stage.name}</option>
+              ))}
             </select>
             <span className="bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-md text-sm font-medium border border-gray-200 dark:border-zinc-600">
               {priorityLabel} Priority
             </span>
-            <span className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-md text-sm font-medium border border-purple-200 dark:border-purple-800">
-              {lead.categoryName}
-            </span>
+            {lead.categories?.map(c => (
+              <span key={c.id} className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-md text-sm font-medium border border-purple-200 dark:border-purple-800 flex items-center gap-1">
+                {c.name}
+                <button onClick={() => handleRemoveCategory(c.id)} className="hover:text-purple-900 dark:hover:text-purple-200 ml-1">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            
+            {/* Category Assigner */}
+            <div className="relative inline-block">
+              <button 
+                onClick={() => setIsAddingCategory(!isAddingCategory)}
+                className="bg-gray-50 text-gray-600 dark:bg-zinc-800 dark:text-gray-400 px-2 py-1 rounded-md text-sm font-medium border border-dashed border-gray-300 dark:border-zinc-600 hover:bg-gray-100 dark:hover:bg-zinc-700 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add Category
+              </button>
+              {isAddingCategory && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg z-50 overflow-hidden">
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {Array.isArray(categoryGroups) && categoryGroups.map(group => (
+                      <div key={group.id}>
+                        <div className="px-3 py-1 bg-gray-50 dark:bg-zinc-900 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          {group.name}
+                        </div>
+                        {group.values?.map(val => (
+                          <button
+                            key={val.id}
+                            disabled={currentCategoryIds.includes(val.id)}
+                            onClick={() => handleAddCategory(val.id)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {val.name}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
 
           {lead.mobileNumber && (

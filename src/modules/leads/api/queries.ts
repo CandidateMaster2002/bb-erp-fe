@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/client';
-import type { Lead, FollowUp, PaginatedResponse, LeadStage } from '../types';
+import type { Lead, FollowUp, PaginatedResponse, CategoryGroup, Stage } from '../types';
 
 export const leadsKeys = {
   all: ['leads'] as const,
@@ -19,7 +19,7 @@ export const useStages = () => {
     queryFn: async () => {
       const { data } = await api.get('/stages');
       const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
-      return arrayData as { id: string | number, name: string }[];
+      return arrayData as Stage[];
     },
   });
 };
@@ -30,7 +30,7 @@ export const useCategories = () => {
     queryFn: async () => {
       const { data } = await api.get('/categories');
       const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
-      return arrayData as { id: string | number, name: string }[];
+      return arrayData as CategoryGroup[];
     },
   });
 };
@@ -125,12 +125,91 @@ export const useUpdateFollowUpStatus = () => {
 export const useUpdateLeadStage = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, stage }: { id: string; stage: LeadStage }) => {
-      const { data } = await api.patch(`/leads/${id}/stage`, { stage });
+    mutationFn: async ({ id, stageId }: { id: string; stageId: string | number }) => {
+      const { data } = await api.patch(`/leads/${id}/stage`, { stageId });
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
     },
+  });
+};
+export const useUpdateLeadCategories = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, categoryIds }: { id: string; categoryIds: (string | number)[] }) => {
+      const { data } = await api.put(`/leads/${id}/categories`, categoryIds);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+export const useCreateCategoryGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await api.post('/categories', { name });
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
+  });
+};
+
+export const useUpdateCategoryGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: string | number; name: string }) => {
+      const { data } = await api.put(`/categories/${id}`, { name });
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
+  });
+};
+
+export const useDeleteCategoryGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string | number) => {
+      const { data } = await api.delete(`/categories/${id}`);
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
+  });
+};
+
+export const useCreateCategoryValue = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ groupId, name }: { groupId: string | number; name: string }) => {
+      const { data } = await api.post(`/categories/${groupId}/values`, { name });
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
+  });
+};
+
+export const useUpdateCategoryValue = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ valueId, name }: { valueId: string | number; name: string }) => {
+      const { data } = await api.put(`/categories/values/${valueId}`, { name });
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
+  });
+};
+
+export const useDeleteCategoryValue = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (valueId: string | number) => {
+      const { data } = await api.delete(`/categories/values/${valueId}`);
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
   });
 };

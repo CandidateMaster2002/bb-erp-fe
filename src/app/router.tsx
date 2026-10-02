@@ -7,6 +7,7 @@ import LeadsList from '../modules/leads/pages/LeadsList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
 import PipelineBoard from '../modules/leads/pages/Pipeline';
 import ReportsDashboard from '../modules/leads/pages/Reports';
+import CategorySettings from '../modules/settings/pages/CategorySettings';
 
 // Placeholders for other routes
 const Placeholder = ({ title }: { title: string }) => (
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
       {
         path: 'reports',
         element: <ReportsDashboard />,
+      },
+      {
+        path: 'settings',
+        element: <CategorySettings />,
       },
       {
         path: 'more',

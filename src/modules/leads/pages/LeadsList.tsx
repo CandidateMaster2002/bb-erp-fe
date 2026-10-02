@@ -13,7 +13,7 @@ export default function LeadsList() {
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
 
   // Fetch filter options
   const { data: stages } = useStages();
@@ -32,11 +32,17 @@ export default function LeadsList() {
   const currentFilters: any = {};
   if (debouncedSearch) {
     currentFilters.q = debouncedSearch;
-    currentFilters.search = debouncedSearch; // pass both just in case backend expects the old one
+    currentFilters.search = debouncedSearch;
   }
   if (hasMobileNo) currentFilters.hasMobileNo = true;
   if (selectedStageId) currentFilters.stageId = selectedStageId;
-  if (selectedCategoryId) currentFilters.categoryId = selectedCategoryId;
+  
+  // Pass all selected category values. The backend expects ?categoryId=1&categoryId=4
+  const categoryIdsParam = Object.values(selectedCategoryIds).filter(Boolean);
+  if (categoryIdsParam.length > 0) {
+    currentFilters.categoryId = categoryIdsParam;
+  }
+  
   if (activeFilterId) currentFilters.filterId = activeFilterId;
 
   const { data, isLoading } = useLeadsList(currentFilters);
@@ -117,16 +123,19 @@ export default function LeadsList() {
           ))}
         </select>
 
-        <select
-          value={selectedCategoryId}
-          onChange={(e) => setSelectedCategoryId(e.target.value)}
-          className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="">All Categories</option>
-          {(Array.isArray(categories) ? categories : []).map(category => (
-            <option key={category.id} value={category.id}>{category.name}</option>
-          ))}
-        </select>
+        {Array.isArray(categories) && categories.map(group => (
+          <select
+            key={group.id}
+            value={selectedCategoryIds[group.id] || ''}
+            onChange={(e) => setSelectedCategoryIds(prev => ({ ...prev, [group.id]: e.target.value }))}
+            className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">{group.name} (All)</option>
+            {group.values?.map(val => (
+              <option key={val.id} value={val.id}>{val.name}</option>
+            ))}
+          </select>
+        ))}
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 pb-24">
