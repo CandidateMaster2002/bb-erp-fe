@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/client';
-import type { Lead, FollowUp, PaginatedResponse, CategoryGroup, Stage } from '../types';
+import type { Lead, FollowUp, PaginatedResponse, CategoryGroup } from '../types';
 
 export const leadsKeys = {
   all: ['leads'] as const,
@@ -9,20 +9,9 @@ export const leadsKeys = {
   details: () => [...leadsKeys.all, 'detail'] as const,
   detail: (id: string) => [...leadsKeys.details(), id] as const,
   today: () => ['today-dashboard'] as const,
-  stages: () => ['stages'] as const,
   categories: () => ['categories'] as const,
 };
 
-export const useStages = () => {
-  return useQuery({
-    queryKey: leadsKeys.stages(),
-    queryFn: async () => {
-      const { data } = await api.get('/stages');
-      const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
-      return arrayData as Stage[];
-    },
-  });
-};
 
 export const useCategories = () => {
   return useQuery({
@@ -122,18 +111,6 @@ export const useUpdateFollowUpStatus = () => {
   });
 };
 
-export const useUpdateLeadStage = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, stageId }: { id: string; stageId: string | number }) => {
-      const { data } = await api.patch(`/leads/${id}/stage`, { stageId });
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
-    },
-  });
-};
 export const useUpdateLeadCategories = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   useLeadDetail, 
-  useStages, 
   useCategories, 
-  useUpdateLeadStage, 
   useUpdateLeadCategories 
 } from '../api/queries';
 import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2, Plus, X } from 'lucide-react';
@@ -14,9 +12,7 @@ import LeadActivityLog from '../components/LeadActivityLog';
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLeadDetail(id!);
-  const { data: stages } = useStages();
   const { data: categoryGroups } = useCategories();
-  const updateStageMutation = useUpdateLeadStage();
   const updateCategoriesMutation = useUpdateLeadCategories();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'followups' | 'tosend'>('timeline');
@@ -29,10 +25,6 @@ export default function LeadDetail() {
   const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
 
   const currentCategoryIds = lead.categories?.map(c => c.id) || [];
-
-  const handleStageChange = (stageId: string | number) => {
-    updateStageMutation.mutate({ id: lead.id, stageId });
-  };
 
   const handleAddCategory = (valueId: string | number) => {
     if (!currentCategoryIds.includes(valueId)) {
@@ -87,16 +79,6 @@ export default function LeadDetail() {
 
         <div className="px-4 pb-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <select 
-              value={lead.stageId || ''}
-              onChange={(e) => handleStageChange(e.target.value)}
-              className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-md px-2 py-1 text-sm font-medium focus:outline-none"
-            >
-              <option value="" disabled>{lead.stageName}</option>
-              {Array.isArray(stages) && stages.map(stage => (
-                <option key={stage.id} value={stage.id}>{stage.name}</option>
-              ))}
-            </select>
             <span className="bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-md text-sm font-medium border border-gray-200 dark:border-zinc-600">
               {priorityLabel} Priority
             </span>

@@ -28,7 +28,7 @@ export default function QuickAddSheet() {
   const onSubmit = async (data: AddLeadForm) => {
     setDuplicateError(null);
     try {
-      await addLead.mutateAsync({ ...data, stageName: 'New', priority: 'WARM' });
+      await addLead.mutateAsync({ ...data, priority: 'WARM' });
       reset();
       setOpen(false);
     } catch (error: any) {

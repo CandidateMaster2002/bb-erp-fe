@@ -1,4 +1,4 @@
-export type LeadStage = 'New' | 'Contacted' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+
 export type LeadPriority = 'HOT' | 'WARM' | 'COLD';
 
 export interface CategoryValue {
@@ -12,10 +12,7 @@ export interface CategoryGroup {
   values: CategoryValue[];
 }
 
-export interface Stage {
-  id: string | number;
-  name: string;
-}
+
 
 export interface Lead {
   id: string;
@@ -26,8 +23,6 @@ export interface Lead {
   linkedinUrl?: string;
   profilePictureUrl?: string;
   categories?: CategoryValue[];
-  stageId?: string | number;
-  stageName: string;
   priority: LeadPriority;
   tags: string[];
   remark: string;

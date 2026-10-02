@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList, useStages, useCategories } from '../api/queries';
+import { useLeadsList, useCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
 import { Search, Filter, Save, Trash2, Link2, Phone } from 'lucide-react';
 import { format } from 'date-fns';
@@ -12,11 +12,9 @@ export default function LeadsList() {
   
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
-  const [selectedStageId, setSelectedStageId] = useState('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
 
   // Fetch filter options
-  const { data: stages } = useStages();
   const { data: categories } = useCategories();
   
   // Debounce the search input by 500ms
@@ -35,7 +33,6 @@ export default function LeadsList() {
     currentFilters.search = debouncedSearch;
   }
   if (hasMobileNo) currentFilters.hasMobileNo = true;
-  if (selectedStageId) currentFilters.stageId = selectedStageId;
   
   // Pass all selected category values. The backend expects ?categoryId=1&categoryId=4
   const categoryIdsParam = Object.values(selectedCategoryIds).filter(Boolean);
@@ -112,17 +109,6 @@ export default function LeadsList() {
 
         <div className="h-4 w-px bg-gray-300 dark:bg-zinc-600 hidden sm:block"></div>
 
-        <select
-          value={selectedStageId}
-          onChange={(e) => setSelectedStageId(e.target.value)}
-          className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="">All Stages</option>
-          {(Array.isArray(stages) ? stages : []).map(stage => (
-            <option key={stage.id} value={stage.id}>{stage.name}</option>
-          ))}
-        </select>
-
         {Array.isArray(categories) && categories.map(group => (
           <select
             key={group.id}
@@ -170,9 +156,13 @@ export default function LeadsList() {
                       </div>
                     )}
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
-                    {lead.stageName}
-                  </span>
+                  <div className="flex gap-1 flex-wrap justify-end">
+                    {lead.categories?.map(c => (
+                      <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <div className="mt-3 flex gap-2 flex-wrap text-xs">
                   <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300">
