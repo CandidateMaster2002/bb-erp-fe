@@ -65,8 +65,8 @@ export const useLeadDetail = (id: string) => {
 export const useAddLead = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (newLead: Partial<Lead>) => {
-      const { data } = await api.post('/leads', newLead);
+    mutationFn: async (payload: any) => {
+      const { data } = await api.post('/leads/quick-add', payload);
       return data;
     },
     onSuccess: () => {
