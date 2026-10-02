@@ -5,9 +5,10 @@ import {
   useCategories, 
   useUpdateLeadCategories 
 } from '../api/queries';
-import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2, Plus, X } from 'lucide-react';
+import { Phone, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 import LeadActivityLog from '../components/LeadActivityLog';
+import type { CategoryGroup } from '../types';
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,25 +18,24 @@ export default function LeadDetail() {
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'details'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
 
   const currentCategoryIds = lead.categories?.map(c => c.id) || [];
 
-  const handleAddCategory = (valueId: string | number) => {
-    if (!currentCategoryIds.includes(valueId)) {
-      updateCategoriesMutation.mutate({ id: lead.id, categoryIds: [...currentCategoryIds, valueId] });
+  const handleGroupCategoryChange = (group: CategoryGroup, newValueId: string) => {
+    const groupValueIds = group.values?.map(v => v.id) || [];
+    
+    // Remove all existing categories that belong to this group
+    const newCategoryIds = currentCategoryIds.filter(id => !groupValueIds.includes(id));
+    
+    // If a new value was selected, add it
+    if (newValueId) {
+      newCategoryIds.push(Number(newValueId));
     }
-    setIsAddingCategory(false);
-  };
-
-  const handleRemoveCategory = (valueId: string | number) => {
-    updateCategoriesMutation.mutate({ 
-      id: lead.id, 
-      categoryIds: currentCategoryIds.filter(id => id !== valueId)
-    });
+    
+    updateCategoriesMutation.mutate({ id: lead.id, categoryIds: newCategoryIds });
   };
 
   return (
@@ -77,60 +77,27 @@ export default function LeadDetail() {
 
         <div className="px-4 pb-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
-            {lead.categories?.map(c => (
-              <span key={c.id} className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-md text-sm font-medium border border-purple-200 dark:border-purple-800 flex items-center gap-1">
-                {c.name}
-                <button onClick={() => handleRemoveCategory(c.id)} className="hover:text-purple-900 dark:hover:text-purple-200 ml-1">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            
-            {/* Category Assigner */}
-            <div className="relative inline-block">
-              <button 
-                onClick={() => setIsAddingCategory(!isAddingCategory)}
-                className="bg-gray-50 text-gray-600 dark:bg-zinc-800 dark:text-gray-400 px-2 py-1 rounded-md text-sm font-medium border border-dashed border-gray-300 dark:border-zinc-600 hover:bg-gray-100 dark:hover:bg-zinc-700 flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Add Category
-              </button>
-              {isAddingCategory && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-lg z-50 overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto py-1">
-                    {Array.isArray(categoryGroups) && categoryGroups.map(group => (
-                      <div key={group.id}>
-                        <div className="px-3 py-1 bg-gray-50 dark:bg-zinc-900 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          {group.name}
-                        </div>
-                        {group.values?.map(val => (
-                          <button
-                            key={val.id}
-                            disabled={currentCategoryIds.includes(val.id)}
-                            onClick={() => handleAddCategory(val.id)}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {val.name}
-                          </button>
-                        ))}
-                      </div>
+            {Array.isArray(categoryGroups) && categoryGroups.map(group => {
+              const groupValueIds = group.values?.map(v => v.id) || [];
+              const currentVal = lead.categories?.find(c => groupValueIds.includes(c.id));
+              const selectedValueId = currentVal ? currentVal.id : '';
+
+              return (
+                <div key={group.id} className="flex items-center">
+                  <select
+                    value={selectedValueId}
+                    onChange={(e) => handleGroupCategoryChange(group, e.target.value)}
+                    className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800 rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  >
+                    <option value="">Select {group.name}</option>
+                    {group.values?.map(val => (
+                      <option key={val.id} value={val.id}>{val.name}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
-              )}
-            </div>
-
+              );
+            })}
           </div>
-
-          {lead.mobileNumber && (
-            <div className="flex gap-2 pt-1">
-              <a href={`tel:${lead.mobileNumber}`} className="flex-1 flex justify-center items-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition">
-                <Phone className="w-4 h-4" /> Call
-              </a>
-              <a href={`https://wa.me/${lead.mobileNumber?.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="flex-1 flex justify-center items-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition">
-                <MessageCircle className="w-4 h-4" /> WhatsApp
-              </a>
-            </div>
-          )}
         </div>
 
         {/* Tabs */}
