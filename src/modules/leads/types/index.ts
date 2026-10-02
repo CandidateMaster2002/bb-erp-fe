@@ -14,15 +14,32 @@ export interface CategoryGroup {
 
 
 
+export interface Education {
+  id: string | number;
+  college?: string;
+  degree?: string;
+  branch?: string;
+  batchStart?: string;
+  batchEnd?: string;
+}
+
 export interface Lead {
   id: string;
   fullName: string;
+  headline?: string;
+  summary?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  location?: string;
+  personalEmail?: string;
   mobileNumber?: string;
   company?: string;
   jobTitle?: string;
   linkedinUrl?: string;
   profilePictureUrl?: string;
   categories?: CategoryValue[];
+  education?: Education[];
   priority: LeadPriority;
   tags: string[];
   remark: string;

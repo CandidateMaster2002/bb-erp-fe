@@ -8,6 +8,7 @@ import {
 import { Phone, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 import LeadActivityLog from '../components/LeadActivityLog';
+import LeadDetailsTab from '../components/LeadDetailsTab';
 import type { CategoryGroup } from '../types';
 
 export default function LeadDetail() {
@@ -123,10 +124,7 @@ export default function LeadDetail() {
         )}
         {activeTab === 'details' && (
           <div className="space-y-4">
-             <div className="p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 space-y-3">
-               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Phone:</span> <p className="dark:text-white">{lead.mobileNumber}</p></div>
-               <div><span className="text-gray-500 dark:text-gray-400 text-sm">Notes:</span> <p className="dark:text-white">{lead.remark || 'N/A'}</p></div>
-             </div>
+            <LeadDetailsTab lead={lead} />
           </div>
         )}
         {/* other tabs placeholder */}

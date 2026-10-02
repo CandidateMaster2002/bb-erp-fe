@@ -320,3 +320,16 @@ export const useActionsByRange = (from: string, to: string) => {
     enabled: !!from && !!to,
   });
 };
+export const useUpdateLeadDetail = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, lead }: { id: string | number; lead: Partial<Lead> }) => {
+      const { data } = await api.put(`/leads/${id}`, lead);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.detail(variables.id.toString()) });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
