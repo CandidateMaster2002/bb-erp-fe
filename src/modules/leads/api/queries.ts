@@ -66,7 +66,7 @@ export const useAddLead = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: any) => {
-      const { data } = await api.post('/leads/quick-add', payload);
+      const { data } = await api.post('/leads', payload);
       return data;
     },
     onSuccess: () => {
