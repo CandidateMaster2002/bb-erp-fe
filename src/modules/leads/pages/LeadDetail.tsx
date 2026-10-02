@@ -23,13 +23,13 @@ export default function LeadDetail() {
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
 
-  const currentCategoryIds = lead.categories?.map(c => c.id) || [];
+  const currentCategoryIds = lead.categories?.map(c => Number(c.id)) || [];
 
   const handleGroupCategoryChange = (group: CategoryGroup, newValueId: string) => {
-    const groupValueIds = group.values?.map(v => v.id) || [];
+    const groupValueIds = group.values?.map(v => Number(v.id)) || [];
     
     // Remove all existing categories that belong to this group
-    const newCategoryIds = currentCategoryIds.filter(id => !groupValueIds.includes(id));
+    const newCategoryIds = currentCategoryIds.filter(id => !groupValueIds.includes(Number(id)));
     
     // If a new value was selected, add it
     if (newValueId) {
@@ -79,8 +79,8 @@ export default function LeadDetail() {
         <div className="px-4 pb-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
             {Array.isArray(categoryGroups) && categoryGroups.map(group => {
-              const groupValueIds = group.values?.map(v => v.id) || [];
-              const currentVal = lead.categories?.find(c => groupValueIds.includes(c.id));
+              const groupValueIds = group.values?.map(v => Number(v.id)) || [];
+              const currentVal = lead.categories?.find(c => groupValueIds.includes(Number(c.id)));
               const selectedValueId = currentVal ? currentVal.id : '';
 
               return (
