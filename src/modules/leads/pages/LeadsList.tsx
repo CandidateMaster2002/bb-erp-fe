@@ -143,24 +143,16 @@ export default function LeadsList() {
             return (
             <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
               <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
-                <div className="flex items-start gap-3">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                    {getInitials(lead.fullName)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
-                        {lead.linkedinUrl && (
-                          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                            <Link2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
-                      </div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap ml-2">
-                        {lead.stageName}
-                      </span>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
+                      {lead.linkedinUrl && (
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                          <Link2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
                     </div>
                     
                     <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
@@ -174,8 +166,11 @@ export default function LeadsList() {
                       </div>
                     )}
                   </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                    {lead.stageName}
+                  </span>
                 </div>
-                <div className="mt-3 flex gap-2 flex-wrap text-xs pl-[60px]">
+                <div className="mt-3 flex gap-2 flex-wrap text-xs">
                   <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300">
                     Priority: {priorityLabel}
                   </span>

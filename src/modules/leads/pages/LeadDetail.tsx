@@ -29,10 +29,6 @@ export default function LeadDetail() {
             <ArrowLeft className="w-5 h-5 dark:text-gray-200" />
           </Link>
 
-          <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xl flex-shrink-0">
-            {getInitials(lead.fullName)}
-          </div>
-          
           <div className="flex-1 min-w-0 pt-1">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold truncate dark:text-white">{lead.fullName}</h1>
