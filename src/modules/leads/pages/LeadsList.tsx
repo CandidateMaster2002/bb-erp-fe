@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import QuickUpdateModal from '../components/QuickUpdateModal';
+import type { Lead } from '../types';
 
 export default function LeadsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('');
+  const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
   
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
@@ -155,12 +158,19 @@ export default function LeadsList() {
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-1 flex-wrap justify-end">
+                  <div className="flex gap-1 flex-wrap justify-end items-start">
                     {lead.categories?.map(c => (
                       <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
                         {c.name}
                       </span>
                     ))}
+                    <button 
+                      onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                      className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
+                      title="Quick Update"
+                    >
+                      <Zap className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2 flex-wrap text-xs">
@@ -184,6 +194,8 @@ export default function LeadsList() {
           </div>
         )}
       </div>
+
+      <QuickUpdateModal lead={quickUpdateLead} onClose={() => setQuickUpdateLead(null)} />
     </div>
   );
 }
