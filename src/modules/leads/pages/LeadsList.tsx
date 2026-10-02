@@ -5,11 +5,6 @@ import { Search, Filter, Save, Trash2, Link2, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 
-const getInitials = (name?: string) => {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-};
-
 export default function LeadsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');

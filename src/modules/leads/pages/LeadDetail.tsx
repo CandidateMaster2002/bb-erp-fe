@@ -4,11 +4,6 @@ import { useLeadDetail } from '../api/queries';
 import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 
-const getInitials = (name?: string) => {
-  if (!name) return '?';
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-};
-
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLeadDetail(id!);
