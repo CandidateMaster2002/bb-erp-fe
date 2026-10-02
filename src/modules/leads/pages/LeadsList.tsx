@@ -144,13 +144,9 @@ export default function LeadsList() {
             <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
               <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
                 <div className="flex items-start gap-3">
-                  {lead.profilePictureUrl ? (
-                    <img src={lead.profilePictureUrl} alt={lead.fullName} className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-zinc-700 flex-shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                      {getInitials(lead.fullName)}
-                    </div>
-                  )}
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {getInitials(lead.fullName)}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2 mb-0.5">
