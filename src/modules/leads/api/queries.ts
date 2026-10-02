@@ -213,3 +213,133 @@ export const useDeleteCategoryValue = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),
   });
 };
+import type { LeadLog } from '../types';
+
+export const actionKeys = {
+  all: ['actions'] as const,
+  today: () => [...actionKeys.all, 'today'] as const,
+  byDate: (date: string) => [...actionKeys.all, 'date', date] as const,
+  byRange: (from: string, to: string) => [...actionKeys.all, 'range', from, to] as const,
+};
+
+export const logKeys = {
+  all: ['lead-logs'] as const,
+  byLead: (leadId: string) => [...logKeys.all, leadId] as const,
+};
+
+// --- LOG QUERIES & MUTATIONS ---
+
+export const useLeadLogs = (leadId: string) => {
+  return useQuery({
+    queryKey: logKeys.byLead(leadId),
+    queryFn: async () => {
+      const { data } = await api.get(`/leads/${leadId}/logs`);
+      return (Array.isArray(data) ? data : (data?.content || data?.data || [])) as LeadLog[];
+    },
+    enabled: !!leadId,
+  });
+};
+
+export const useCreateLeadLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadId, log }: { leadId: string | number; log: Partial<LeadLog> }) => {
+      const { data } = await api.post(`/leads/${leadId}/logs`, log);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: logKeys.byLead(variables.leadId.toString()) });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+    },
+  });
+};
+
+export const useUpdateLeadLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ logId, log }: { logId: string | number; log: Partial<LeadLog> }) => {
+      const { data } = await api.put(`/leads/logs/${logId}`, log);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: logKeys.all });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+    },
+  });
+};
+
+export const useDeleteLeadLog = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (logId: string | number) => {
+      const { data } = await api.delete(`/leads/logs/${logId}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: logKeys.all });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+    },
+  });
+};
+
+export const useCompleteLogAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (logId: string | number) => {
+      const { data } = await api.patch(`/leads/logs/${logId}/complete`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: logKeys.all });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+    },
+  });
+};
+
+export const useCancelLogAction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (logId: string | number) => {
+      const { data } = await api.patch(`/leads/logs/${logId}/cancel`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: logKeys.all });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+    },
+  });
+};
+
+// --- ACTIONS AGENDA QUERIES ---
+
+export const useActionsToday = () => {
+  return useQuery({
+    queryKey: actionKeys.today(),
+    queryFn: async () => {
+      const { data } = await api.get('/actions/today');
+      return (Array.isArray(data) ? data : (data?.content || data?.data || [])) as LeadLog[];
+    },
+  });
+};
+
+export const useActionsByDate = (date: string) => {
+  return useQuery({
+    queryKey: actionKeys.byDate(date),
+    queryFn: async () => {
+      const { data } = await api.get(`/actions?date=${date}`);
+      return (Array.isArray(data) ? data : (data?.content || data?.data || [])) as LeadLog[];
+    },
+    enabled: !!date,
+  });
+};
+
+export const useActionsByRange = (from: string, to: string) => {
+  return useQuery({
+    queryKey: actionKeys.byRange(from, to),
+    queryFn: async () => {
+      const { data } = await api.get(`/actions/range?from=${from}&to=${to}`);
+      return (Array.isArray(data) ? data : (data?.content || data?.data || [])) as LeadLog[];
+    },
+    enabled: !!from && !!to,
+  });
+};

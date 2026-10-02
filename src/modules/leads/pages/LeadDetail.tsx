@@ -9,6 +9,7 @@ import {
 } from '../api/queries';
 import { Phone, MessageCircle, MoreVertical, ArrowLeft, Link2, Plus, X } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
+import LeadActivityLog from '../components/LeadActivityLog';
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
@@ -173,9 +174,7 @@ export default function LeadDetail() {
       <div className="p-4">
         {activeTab === 'timeline' && (
           <div className="space-y-4">
-            <div className="p-4 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700">
-              <p className="text-gray-500 dark:text-gray-400 text-sm text-center">No interactions logged yet.</p>
-            </div>
+            <LeadActivityLog leadId={lead.id} />
           </div>
         )}
         {activeTab === 'details' && (

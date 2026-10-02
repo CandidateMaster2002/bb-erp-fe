@@ -36,6 +36,19 @@ export interface Lead {
   createdAt: string;
 }
 
+export type ActionStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
+
+export interface LeadLog {
+  id: string | number;
+  leadId: string | number;
+  leadName?: string;
+  comment?: string;
+  nextAction?: string;
+  nextActionDate?: string;
+  actionStatus?: ActionStatus;
+  createdAt: string;
+}
+
 export interface FollowUp {
   id: string;
   leadId: string;
