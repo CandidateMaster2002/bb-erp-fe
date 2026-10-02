@@ -18,7 +18,8 @@ export const useStages = () => {
     queryKey: leadsKeys.stages(),
     queryFn: async () => {
       const { data } = await api.get('/stages');
-      return data as { id: string | number, name: string }[];
+      const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
+      return arrayData as { id: string | number, name: string }[];
     },
   });
 };
@@ -28,7 +29,8 @@ export const useCategories = () => {
     queryKey: leadsKeys.categories(),
     queryFn: async () => {
       const { data } = await api.get('/categories');
-      return data as { id: string | number, name: string }[];
+      const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
+      return arrayData as { id: string | number, name: string }[];
     },
   });
 };

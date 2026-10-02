@@ -117,7 +117,7 @@ export default function LeadsList() {
           className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="">All Stages</option>
-          {stages?.map(stage => (
+          {(Array.isArray(stages) ? stages : []).map(stage => (
             <option key={stage.id} value={stage.id}>{stage.name}</option>
           ))}
         </select>
@@ -128,7 +128,7 @@ export default function LeadsList() {
           className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="">All Categories</option>
-          {categories?.map(category => (
+          {(Array.isArray(categories) ? categories : []).map(category => (
             <option key={category.id} value={category.id}>{category.name}</option>
           ))}
         </select>
