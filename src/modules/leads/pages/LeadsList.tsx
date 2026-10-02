@@ -129,7 +129,6 @@ export default function LeadsList() {
           <div className="text-center py-4">Loading leads...</div>
         ) : data?.content && data.content.length > 0 ? (
           data.content.map(lead => {
-            const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
             return (
             <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
               <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
@@ -165,9 +164,6 @@ export default function LeadsList() {
                   </div>
                 </div>
                 <div className="mt-3 flex gap-2 flex-wrap text-xs">
-                  <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300">
-                    Priority: {priorityLabel}
-                  </span>
                   {lead.nextFollowUpDate && (
                     <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
                       Next: {format(new Date(lead.nextFollowUpDate), 'MMM d')}

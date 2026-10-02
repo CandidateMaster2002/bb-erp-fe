@@ -15,14 +15,12 @@ export default function LeadDetail() {
   const { data: categoryGroups } = useCategories();
   const updateCategoriesMutation = useUpdateLeadCategories();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'followups' | 'tosend'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'details'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
-
-  const priorityLabel = lead.priority === 'HOT' ? 'High' : lead.priority === 'WARM' ? 'Medium' : lead.priority === 'COLD' ? 'Low' : lead.priority;
 
   const currentCategoryIds = lead.categories?.map(c => c.id) || [];
 
@@ -79,9 +77,6 @@ export default function LeadDetail() {
 
         <div className="px-4 pb-4 space-y-3">
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 px-2 py-1 rounded-md text-sm font-medium border border-gray-200 dark:border-zinc-600">
-              {priorityLabel} Priority
-            </span>
             {lead.categories?.map(c => (
               <span key={c.id} className="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-md text-sm font-medium border border-purple-200 dark:border-purple-800 flex items-center gap-1">
                 {c.name}
@@ -140,7 +135,7 @@ export default function LeadDetail() {
 
         {/* Tabs */}
         <div className="flex border-t border-gray-200 dark:border-zinc-700 overflow-x-auto hide-scrollbar">
-          {(['timeline', 'details', 'followups', 'tosend'] as const).map(tab => (
+          {(['timeline', 'details'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
