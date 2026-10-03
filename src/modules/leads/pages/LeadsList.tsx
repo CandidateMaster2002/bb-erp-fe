@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -12,6 +12,7 @@ export default function LeadsList() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('');
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table'); // Default to table for denser view
   
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
@@ -82,6 +83,22 @@ export default function LeadsList() {
           <button className="p-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-sm">
             <Filter className="w-4 h-4 dark:text-gray-300" />
           </button>
+          <div className="flex bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-md overflow-hidden shadow-sm ml-2">
+            <button 
+              onClick={() => setViewMode('table')} 
+              className={`p-1.5 ${viewMode === 'table' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+              title="Table View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('card')} 
+              className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 ${viewMode === 'card' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+              title="Card View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -127,67 +144,121 @@ export default function LeadsList() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pb-24">
+      <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? (
           <div className="text-center py-4">Loading leads...</div>
         ) : data?.content && data.content.length > 0 ? (
-          data.content.map(lead => {
-            return (
-            <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
-              <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
-                      {lead.linkedinUrl && (
-                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                          <Link2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                      {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
-                    </p>
-                    
-                    {lead.mobileNumber && (
-                      <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <Phone className="w-3 h-3" />
-                        <span>{lead.mobileNumber}</span>
+          viewMode === 'card' ? (
+            <div className="space-y-3">
+              {data.content.map(lead => (
+                <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
+                  <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
+                          {lead.linkedinUrl && (
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                              <Link2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
+                        </p>
+                        
+                        {lead.mobileNumber && (
+                          <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <Phone className="w-3 h-3" />
+                            <span>{lead.mobileNumber}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      <div className="flex gap-1 flex-wrap justify-end items-start">
+                        {lead.categories?.map(c => (
+                          <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                            {c.name}
+                          </span>
+                        ))}
+                        <button 
+                          onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                          className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
+                          title="Quick Update"
+                        >
+                          <Zap className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-2 flex-wrap text-xs">
+                      {lead.nextFollowUpDate && (
+                        <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
+                          Next: {format(new Date(lead.nextFollowUpDate), 'MMM d')}
+                        </span>
+                      )}
+                      {lead.lastContactedDate && (
+                        <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300 flex items-center gap-1">
+                          Last: {format(new Date(lead.lastContactedDate), 'MMM d')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1 flex-wrap justify-end items-start">
-                    {lead.categories?.map(c => (
-                      <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
-                        {c.name}
-                      </span>
-                    ))}
-                    <button 
-                      onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
-                      className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
-                      title="Quick Update"
-                    >
-                      <Zap className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-3 flex gap-2 flex-wrap text-xs">
-                  {lead.nextFollowUpDate && (
-                    <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
-                      Next: {format(new Date(lead.nextFollowUpDate), 'MMM d')}
-                    </span>
-                  )}
-                  {lead.lastContactedDate && (
-                    <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300 flex items-center gap-1">
-                      Last: {format(new Date(lead.lastContactedDate), 'MMM d')}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </Link>
-          )})
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
+                <thead className="bg-gray-50 dark:bg-zinc-900/50">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company / Title</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Contact</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Categories</th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
+                  {data.content.map(lead => (
+                    <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <Link to={`/leads/${lead.id}`} className="block">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{lead.fullName}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">#{lead.id}</div>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                        {lead.company || '-'}
+                        {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                        {lead.mobileNumber || '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {lead.categories?.map(c => (
+                            <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                          title="Quick Update"
+                        >
+                          <Zap className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
             No leads found. Tap + to add one.

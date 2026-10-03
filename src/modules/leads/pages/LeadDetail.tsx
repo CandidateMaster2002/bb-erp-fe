@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
   useLeadDetail, 
@@ -19,24 +19,34 @@ export default function LeadDetail() {
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'details'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  // Keep local state in sync with server data initially
+  useEffect(() => {
+    if (lead?.categories) {
+      setSelectedCategoryIds(lead.categories.map(c => Number(c.id)));
+    }
+  }, [lead?.categories]);
 
   if (isLoading) return <div className="p-4 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (!lead) return <div className="p-4">Lead not found</div>;
 
-  const currentCategoryIds = lead.categories?.map(c => Number(c.id)) || [];
-
   const handleGroupCategoryChange = (group: CategoryGroup, newValueId: string) => {
     const groupValueIds = group.values?.map(v => Number(v.id)) || [];
     
-    // Remove all existing categories that belong to this group
-    const newCategoryIds = currentCategoryIds.filter(id => !groupValueIds.includes(Number(id)));
+    // Remove all existing categories that belong to this group from the current local array
+    const nextIds = selectedCategoryIds.filter(id => !groupValueIds.includes(id));
     
-    // If a new value was selected, add it
+    // If a new value was selected, add it to the array
     if (newValueId) {
-      newCategoryIds.push(Number(newValueId));
+      nextIds.push(Number(newValueId));
     }
     
-    updateCategoriesMutation.mutate({ id: lead.id, categoryIds: newCategoryIds });
+    // 1. Update local state immediately so UI feels snappy
+    setSelectedCategoryIds(nextIds);
+    
+    // 2. Gather all active selected IDs and send flat array to backend
+    updateCategoriesMutation.mutate({ id: lead.id, categoryIds: nextIds });
   };
 
   return (
@@ -80,8 +90,7 @@ export default function LeadDetail() {
           <div className="flex flex-wrap gap-2 items-center">
             {Array.isArray(categoryGroups) && categoryGroups.map(group => {
               const groupValueIds = group.values?.map(v => Number(v.id)) || [];
-              const currentVal = lead.categories?.find(c => groupValueIds.includes(Number(c.id)));
-              const selectedValueId = currentVal ? currentVal.id : '';
+              const selectedValueId = selectedCategoryIds.find(id => groupValueIds.includes(id)) || '';
 
               return (
                 <div key={group.id} className="flex items-center">
