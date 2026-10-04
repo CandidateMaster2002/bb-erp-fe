@@ -31,10 +31,21 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
 
   if (!lead) return null;
 
-  const toggleCategory = (id: number) => {
-    setSelectedCategoryIds(prev => 
-      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
-    );
+  const toggleCategory = (group: any, id: number) => {
+    setSelectedCategoryIds(prev => {
+      // Find all IDs that belong to the same group
+      const groupValueIds = group.values?.map((v: any) => Number(v.id)) || [];
+      // Remove any currently selected IDs that belong to this group
+      const nextIds = prev.filter(cId => !groupValueIds.includes(cId));
+      
+      // If the clicked ID was already selected, it will be toggled off (like a radio uncheck/toggle).
+      // If you strictly want radio behavior (cannot unselect), just do: return [...nextIds, id];
+      // But toggling off is usually better for tags. Let's allow toggle off:
+      if (prev.includes(id)) {
+        return nextIds;
+      }
+      return [...nextIds, id];
+    });
   };
 
   const handleSave = async () => {
@@ -96,7 +107,7 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
                       return (
                         <button
                           key={val.id}
-                          onClick={() => toggleCategory(Number(val.id))}
+                          onClick={() => toggleCategory(group, Number(val.id))}
                           className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
                             isSelected 
                               ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800' 

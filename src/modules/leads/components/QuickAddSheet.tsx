@@ -58,10 +58,13 @@ export default function QuickAddSheet() {
     }
   }, [open, categoryGroups, reset]);
 
-  const toggleCategory = (id: number) => {
-    setSelectedCategoryIds(prev => 
-      prev.includes(id) ? prev.filter(cId => cId !== id) : [...prev, id]
-    );
+  const toggleCategory = (group: any, id: number) => {
+    setSelectedCategoryIds(prev => {
+      const groupValueIds = group.values?.map((v: any) => Number(v.id)) || [];
+      const nextIds = prev.filter(cId => !groupValueIds.includes(cId));
+      if (prev.includes(id)) return nextIds;
+      return [...nextIds, id];
+    });
   };
 
   const onSubmit = async (data: AddLeadForm) => {
@@ -187,7 +190,7 @@ export default function QuickAddSheet() {
                           <button
                             key={val.id}
                             type="button"
-                            onClick={() => toggleCategory(Number(val.id))}
+                            onClick={() => toggleCategory(group, Number(val.id))}
                             className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                               selectedCategoryIds.includes(Number(val.id))
                                 ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800'
