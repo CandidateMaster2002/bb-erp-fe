@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Linkedin } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -245,13 +245,24 @@ export default function LeadsList() {
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <button 
-                          onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
-                          title="Quick Update"
-                        >
-                          <Zap className="w-4 h-4" />
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          {lead.linkedinUrl && (
+                            <button 
+                              onClick={(e) => { e.preventDefault(); window.open(lead.linkedinUrl, '_blank'); }}
+                              className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                              title="LinkedIn Profile"
+                            >
+                              <Linkedin className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                            title="Quick Update"
+                          >
+                            <Zap className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
