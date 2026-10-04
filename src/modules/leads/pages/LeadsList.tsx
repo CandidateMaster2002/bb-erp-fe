@@ -232,8 +232,7 @@ export default function LeadsList() {
                     <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <Link to={`/leads/${lead.id}`} className="block">
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{lead.fullName}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">#{lead.id}</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
                         </Link>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
