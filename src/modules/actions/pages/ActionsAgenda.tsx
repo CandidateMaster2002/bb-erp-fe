@@ -6,44 +6,30 @@ import {
   useCompleteLogAction, 
   useCancelLogAction 
 } from '../../leads/api/queries';
-import { CheckCircle2, XCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, User } from 'lucide-react';
-import { format, addDays, startOfWeek, endOfWeek, subDays, isBefore, startOfDay } from 'date-fns';
+import { CheckCircle2, XCircle, User } from 'lucide-react';
+import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
 
-type ViewMode = 'today' | 'date' | 'week';
+type ViewMode = 'today' | 'tomorrow' | 'week';
 
 export default function ActionsAgenda() {
   const [viewMode, setViewMode] = useState<ViewMode>('today');
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const todayQuery = useActionsToday();
-  const dateQuery = useActionsByDate(format(selectedDate, 'yyyy-MM-dd'));
+  const tomorrowQuery = useActionsByDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
   const weekQuery = useActionsByRange(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
 
   const completeAction = useCompleteLogAction();
   const cancelAction = useCancelLogAction();
 
   let currentQuery = todayQuery;
-  if (viewMode === 'date') currentQuery = dateQuery;
+  if (viewMode === 'tomorrow') currentQuery = tomorrowQuery;
   if (viewMode === 'week') currentQuery = weekQuery;
 
   const { data: actions, isLoading } = currentQuery;
-
-  const navigateDate = (direction: 'prev' | 'next') => {
-    if (viewMode === 'date') {
-      setSelectedDate(prev => direction === 'next' ? addDays(prev, 1) : subDays(prev, 1));
-    } else if (viewMode === 'week') {
-      setSelectedDate(prev => direction === 'next' ? addDays(prev, 7) : subDays(prev, 7));
-    }
-  };
-
-  const setToday = () => {
-    setViewMode('today');
-    setSelectedDate(new Date());
-  };
 
   const now = startOfDay(new Date());
 
@@ -54,16 +40,16 @@ export default function ActionsAgenda() {
         
         <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm">
           <button 
-            onClick={setToday}
+            onClick={() => setViewMode('today')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'today' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
           >
             Today
           </button>
           <button 
-            onClick={() => setViewMode('date')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'date' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+            onClick={() => setViewMode('tomorrow')}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${viewMode === 'tomorrow' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
           >
-            By Date
+            Tomorrow
           </button>
           <button 
             onClick={() => setViewMode('week')}
@@ -73,17 +59,6 @@ export default function ActionsAgenda() {
           </button>
         </div>
       </div>
-
-      {(viewMode === 'date' || viewMode === 'week') && (
-        <div className="flex items-center justify-between bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 mb-6 shadow-sm">
-          <button onClick={() => navigateDate('prev')} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-md transition"><ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" /></button>
-          <div className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-gray-500" />
-            {viewMode === 'date' ? format(selectedDate, 'MMMM d, yyyy') : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`}
-          </div>
-          <button onClick={() => navigateDate('next')} className="p-2 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-md transition"><ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" /></button>
-        </div>
-      )}
 
       <div className="flex-1 overflow-y-auto pr-2 space-y-4 hide-scrollbar">
         {isLoading ? (

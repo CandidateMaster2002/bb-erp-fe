@@ -1,14 +1,13 @@
 import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Columns, Settings, LogOut, FileBarChart, CalendarCheck } from 'lucide-react';
+import { Users, Columns, Settings, LogOut, FileBarChart, CalendarCheck } from 'lucide-react';
 import { cn } from '../shared/utils/cn';
 import QuickAddSheet from '../modules/leads/components/QuickAddSheet';
 import RemindersWidget from '../modules/leads/components/RemindersWidget';
 
 // Modules config for future scaling
 const MODULES_NAV = [
-  { name: 'Today', path: '/', icon: LayoutDashboard },
+  { name: 'Actions', path: '/', icon: CalendarCheck },
   { name: 'Leads', path: '/leads', icon: Users },
-  { name: 'Actions', path: '/actions', icon: CalendarCheck },
   { name: 'Pipeline', path: '/pipeline', icon: Columns },
   { name: 'Reports', path: '/reports', icon: FileBarChart },
   { name: 'Settings', path: '/settings', icon: Settings },

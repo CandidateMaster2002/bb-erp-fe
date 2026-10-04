@@ -1,7 +1,6 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import Login from '../modules/auth/Login';
-import TodayDashboard from '../modules/leads/pages/Today';
 
 import LeadsList from '../modules/leads/pages/LeadsList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
@@ -26,7 +25,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <TodayDashboard />, // 'Today' view
+        element: <ActionsAgenda />, // 'Actions' view is now default
       },
       {
         path: 'leads',
@@ -39,10 +38,6 @@ export const router = createBrowserRouter([
       {
         path: 'pipeline',
         element: <PipelineBoard />,
-      },
-      {
-        path: 'actions',
-        element: <ActionsAgenda />,
       },
       {
         path: 'reports',
