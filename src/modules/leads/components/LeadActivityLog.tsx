@@ -22,6 +22,11 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
   const [comment, setComment] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
+  
+  const [editingLogId, setEditingLogId] = useState<string | number | null>(null);
+  const [editComment, setEditComment] = useState('');
+  const [editNextAction, setEditNextAction] = useState('');
+  const [editNextActionDate, setEditNextActionDate] = useState('');
 
   const handleAddLog = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +37,7 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
       log: {
         comment: comment.trim() || undefined,
         nextAction: nextAction.trim() || undefined,
-        nextActionDate: nextActionDate || undefined,
+        nextActionDate: nextActionDate ? new Date(nextActionDate).toISOString() : undefined,
       }
     });
 
@@ -47,14 +52,34 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
     }
   };
 
-  const handleEdit = async (log: LeadLog) => {
-    const newComment = prompt('Edit comment:', log.comment || '');
-    if (newComment !== null) {
-      await updateLog.mutateAsync({
-        logId: log.id,
-        log: { ...log, comment: newComment.trim() }
-      });
+  const handleEdit = (log: LeadLog) => {
+    setEditingLogId(log.id);
+    setEditComment(log.comment || '');
+    setEditNextAction(log.nextAction || '');
+    let localDateStr = '';
+    if (log.nextActionDate) {
+      const d = new Date(log.nextActionDate);
+      if (!isNaN(d.getTime())) {
+        localDateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      }
     }
+    setEditNextActionDate(localDateStr);
+  };
+
+  const handleSaveEdit = async (logId: string | number) => {
+    await updateLog.mutateAsync({
+      logId,
+      log: { 
+        comment: editComment.trim() || undefined,
+        nextAction: editNextAction.trim() || undefined,
+        nextActionDate: editNextActionDate ? new Date(editNextActionDate).toISOString() : undefined,
+      }
+    });
+    setEditingLogId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLogId(null);
   };
 
   return (
@@ -79,9 +104,9 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
               className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-56">
             <input
-              type="date"
+              type="datetime-local"
               value={nextActionDate}
               onChange={e => setNextActionDate(e.target.value)}
               className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
@@ -108,35 +133,71 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
         ) : (
           logs.map(log => (
             <div key={log.id} className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-2">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  {log.comment && (
-                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{log.comment}</p>
-                  )}
-                  {log.nextAction && (
-                    <div className="mt-2 flex items-center gap-2 text-sm">
-                      <span className="flex items-center gap-1 font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-                        <ClipboardList className="w-4 h-4" /> {log.nextAction}
-                        {log.nextActionDate && (
-                          <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 ml-2 border-l border-blue-200 dark:border-blue-800 pl-2">
-                            <Calendar className="w-3 h-3" />
-                            {format(new Date(log.nextActionDate), 'MMM d, yyyy')}
-                          </span>
-                        )}
-                      </span>
+              {editingLogId === log.id ? (
+                <div className="space-y-3">
+                  <div>
+                    <textarea
+                      value={editComment}
+                      onChange={e => setEditComment(e.target.value)}
+                      placeholder="Edit comment..."
+                      className="w-full text-sm p-3 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500 min-h-[80px]"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={editNextAction}
+                        onChange={e => setEditNextAction(e.target.value)}
+                        placeholder="Next Action (optional)"
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <span className="text-xs text-gray-400">
-                    {format(new Date(log.createdAt), 'MMM d, yyyy • h:mm a')}
-                  </span>
-                  <div className="flex gap-1 text-gray-400">
-                    <button onClick={() => handleEdit(log)} className="p-1 hover:text-blue-500 transition"><Edit2 className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDelete(log.id)} className="p-1 hover:text-red-500 transition"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className="w-full sm:w-56">
+                      <input
+                        type="datetime-local"
+                        value={editNextActionDate}
+                        onChange={e => setEditNextActionDate(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end mt-2">
+                    <button onClick={handleCancelEdit} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-700 rounded-md transition">Cancel</button>
+                    <button onClick={() => handleSaveEdit(log.id)} className="px-3 py-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-md transition">Save</button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1">
+                      {log.comment && (
+                        <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{log.comment}</p>
+                      )}
+                      {log.nextAction && (
+                        <div className="mt-2 flex items-center gap-2 text-sm">
+                          <span className="flex items-center gap-1 font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
+                            <ClipboardList className="w-4 h-4" /> {log.nextAction}
+                            {log.nextActionDate && (
+                              <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 ml-2 border-l border-blue-200 dark:border-blue-800 pl-2">
+                                <Calendar className="w-3 h-3" />
+                                {format(new Date(log.nextActionDate), log.nextActionDate.includes('T') && !log.nextActionDate.endsWith('T00:00:00.000Z') ? 'MMM d, yyyy h:mm a' : 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-xs text-gray-400">
+                        {format(new Date(log.createdAt), 'MMM d, yyyy • h:mm a')}
+                      </span>
+                      <div className="flex gap-1 text-gray-400">
+                        <button onClick={() => handleEdit(log)} className="p-1 hover:text-blue-500 transition"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDelete(log.id)} className="p-1 hover:text-red-500 transition"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </div>
+                  </div>
 
               {/* Action Status Controls */}
               {log.actionStatus && (
@@ -167,6 +228,8 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
                   )}
                 </div>
               )}
+              </>
+            )}
             </div>
           ))
         )}
