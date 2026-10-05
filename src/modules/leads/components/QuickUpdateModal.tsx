@@ -152,9 +152,9 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Next Action Date</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Next Action Date (Optional)</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={nextActionDate}
                     onChange={e => setNextActionDate(e.target.value)}
                     className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
