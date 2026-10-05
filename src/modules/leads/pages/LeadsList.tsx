@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList, useCategories } from '../api/queries';
+import { useLeadsList, useCategories, useUpdateLeadDetail } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -16,6 +16,17 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
 );
 
 export default function LeadsList() {
+  const updateLead = useUpdateLeadDetail();
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editingContactValue, setEditingContactValue] = useState('');
+
+  const handleContactSave = async (id: string | number) => {
+    if (editingContactId === id.toString()) {
+      await updateLead.mutateAsync({ id, lead: { mobileNumber: editingContactValue } });
+      setEditingContactId(null);
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('');
@@ -177,12 +188,42 @@ export default function LeadsList() {
                           {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
                         </p>
                         
-                        {lead.mobileNumber && (
-                          <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            <Phone className="w-3 h-3" />
-                            <span>{lead.mobileNumber}</span>
-                          </div>
-                        )}
+                        <div className="group/contact flex items-center h-6 mt-1 cursor-pointer" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
+                          {editingContactId === lead.id.toString() ? (
+                            <div className="flex items-center gap-1 w-full max-w-[200px]" onClick={e => e.preventDefault()}>
+                              <input 
+                                type="text"
+                                autoFocus
+                                value={editingContactValue}
+                                onChange={e => setEditingContactValue(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleContactSave(lead.id);
+                                  if (e.key === 'Escape') setEditingContactId(null);
+                                }}
+                                className="w-full px-2 py-0.5 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                                placeholder="Mobile No"
+                              />
+                              <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 p-0.5 hover:bg-green-50 rounded dark:hover:bg-green-900/30">
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 p-0.5 hover:bg-gray-100 rounded dark:hover:bg-zinc-700">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              {lead.mobileNumber ? (
+                                <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                                  <Phone className="w-3 h-3" />
+                                  <span>{lead.mobileNumber}</span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-400 italic flex items-center gap-1"><Phone className="w-3 h-3 opacity-50" /> Add contact</div>
+                              )}
+                              <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 ml-2 text-gray-400 transition" />
+                            </>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-1 flex-wrap justify-end items-start">
                         {lead.categories?.map(c => (
@@ -239,8 +280,34 @@ export default function LeadsList() {
                         {lead.company || '-'}
                         {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        {lead.mobileNumber || '-'}
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300 relative group/contact" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
+                        {editingContactId === lead.id.toString() ? (
+                          <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
+                            <input 
+                              type="text"
+                              autoFocus
+                              value={editingContactValue}
+                              onChange={e => setEditingContactValue(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleContactSave(lead.id);
+                                if (e.key === 'Escape') setEditingContactId(null);
+                              }}
+                              className="w-28 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                              placeholder="Mobile No"
+                            />
+                            <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition">
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 cursor-pointer">
+                            <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
+                            <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1 flex-wrap">
