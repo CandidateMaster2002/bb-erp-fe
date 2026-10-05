@@ -10,10 +10,12 @@ import {
 import { CheckCircle2, XCircle, User, Clock } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
+import TasksView from '../components/TasksView';
 
 type ViewMode = 'today' | 'tomorrow' | 'week';
 
 export default function ActionsAgenda() {
+  const [activeTab, setActiveTab] = useState<'leads' | 'tasks'>('leads');
   const [viewMode, setViewMode] = useState<ViewMode>('today');
 
   const todayQuery = useActionsToday();
@@ -52,8 +54,25 @@ export default function ActionsAgenda() {
   return (
     <div className="p-4 max-w-5xl mx-auto pb-24 h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
+          <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700">
+            <button 
+              onClick={() => setActiveTab('leads')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeTab === 'leads' ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+            >
+              Lead Follow-ups
+            </button>
+            <button 
+              onClick={() => setActiveTab('tasks')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeTab === 'tasks' ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+            >
+              My To-Do List
+            </button>
+          </div>
+        </div>
         
+        {activeTab === 'leads' && (
         <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm">
           <button 
             onClick={() => setViewMode('today')}
@@ -74,8 +93,12 @@ export default function ActionsAgenda() {
             This Week
           </button>
         </div>
+        )}
       </div>
 
+      {activeTab === 'tasks' ? (
+        <TasksView />
+      ) : (
       <div className="flex-1 overflow-y-auto pr-2 space-y-4 hide-scrollbar">
         {isLoading ? (
           <div className="text-center py-8 text-gray-500">Loading actions...</div>
@@ -176,6 +199,7 @@ export default function ActionsAgenda() {
           })
         )}
       </div>
+      )}
     </div>
   );
 }
