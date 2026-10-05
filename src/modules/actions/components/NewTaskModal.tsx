@@ -1,12 +1,20 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCreateTask } from '../api/tasks';
 import { X, Calendar } from 'lucide-react';
 
-export default function NewTaskModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export default function NewTaskModal({ isOpen, onClose, defaultDate = '' }: { isOpen: boolean; onClose: () => void; defaultDate?: string; }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadline, setDeadline] = useState(defaultDate);
   
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDescription('');
+      setDeadline(defaultDate);
+    }
+  }, [isOpen, defaultDate]);
+
   const createMutation = useCreateTask();
 
   if (!isOpen) return null;

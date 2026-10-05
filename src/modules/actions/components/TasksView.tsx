@@ -15,14 +15,15 @@ import {
 import type { Task } from '../api/tasks';
 import NewTaskModal from './NewTaskModal';
 
-type TaskFilter = 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled';
+type TaskFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled';
 
 export default function TasksView() {
-  const [filter, setFilter] = useState<TaskFilter>('today');
+  const [filter, setFilter] = useState<TaskFilter>('all');
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [postponeTaskId, setPostponeTaskId] = useState<number | null>(null);
   const [postponeDate, setPostponeDate] = useState<string>('');
 
+  const allQuery = useTasksByStatus('PENDING');
   const todayQuery = useTasksToday();
   const tomorrowQuery = useTasksByDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
   const weekQuery = useTasksByRange(
@@ -36,7 +37,8 @@ export default function TasksView() {
   const cancelMutation = useCancelTask();
   const updateMutation = useUpdateTask();
 
-  let currentQuery = todayQuery;
+  let currentQuery = allQuery;
+  if (filter === 'today') currentQuery = todayQuery;
   if (filter === 'tomorrow') currentQuery = tomorrowQuery;
   if (filter === 'week') currentQuery = weekQuery;
   if (filter === 'completed') currentQuery = completedQuery;
@@ -60,7 +62,7 @@ export default function TasksView() {
       {/* Header and Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-wrap items-center gap-2 bg-gray-100/80 dark:bg-zinc-800/80 p-1 rounded-xl">
-          {(['today', 'tomorrow', 'week', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
+          {(['all', 'today', 'tomorrow', 'week', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -191,7 +193,12 @@ export default function TasksView() {
 
       <NewTaskModal 
         isOpen={isNewTaskModalOpen} 
-        onClose={() => setIsNewTaskModalOpen(false)} 
+        onClose={() => setIsNewTaskModalOpen(false)}
+        defaultDate={
+          filter === 'tomorrow' ? format(addDays(new Date(), 1), "yyyy-MM-dd'T'09:00") : 
+          filter === 'today' ? format(new Date(), "yyyy-MM-dd'T'09:00") : 
+          ''
+        }
       />
     </div>
   );

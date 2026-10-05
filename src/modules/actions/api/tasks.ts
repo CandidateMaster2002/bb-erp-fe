@@ -34,7 +34,7 @@ export const useTasksByRange = (from: string, to: string) => useQuery({
   queryFn: async () => (await api.get<Task[]>('/tasks/between', { params: { from, to } })).data
 });
 
-export const useTasksByStatus = (status: 'COMPLETED' | 'CANCELLED') => useQuery({
+export const useTasksByStatus = (status: 'PENDING' | 'COMPLETED' | 'CANCELLED') => useQuery({
   queryKey: taskKeys.status(status),
   queryFn: async () => (await api.get<Task[]>(`/tasks/status/${status}`)).data
 });
