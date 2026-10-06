@@ -9,6 +9,7 @@ import { Phone, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 import LeadActivityLog from '../components/LeadActivityLog';
 import LeadDetailsTab from '../components/LeadDetailsTab';
+import LeadLinksTab from '../components/LeadLinksTab';
 import type { CategoryGroup } from '../types';
 
 export default function LeadDetail() {
@@ -17,7 +18,7 @@ export default function LeadDetail() {
   const { data: categoryGroups } = useCategories();
   const updateCategoriesMutation = useUpdateLeadCategories();
 
-  const [activeTab, setActiveTab] = useState<'timeline' | 'details'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'links'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
 
@@ -112,7 +113,7 @@ export default function LeadDetail() {
 
         {/* Tabs */}
         <div className="flex border-t border-gray-200 dark:border-zinc-700 overflow-x-auto hide-scrollbar">
-          {(['timeline', 'details'] as const).map(tab => (
+          {(['timeline', 'details', 'links'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -134,6 +135,11 @@ export default function LeadDetail() {
         {activeTab === 'details' && (
           <div className="space-y-4">
             <LeadDetailsTab lead={lead} />
+          </div>
+        )}
+        {activeTab === 'links' && (
+          <div className="space-y-4">
+            <LeadLinksTab leadId={lead.id} />
           </div>
         )}
         {/* other tabs placeholder */}

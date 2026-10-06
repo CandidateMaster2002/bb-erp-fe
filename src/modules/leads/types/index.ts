@@ -96,3 +96,10 @@ export interface PaginatedResponse<T> {
   size: number;
   number: number;
 }
+
+export interface LeadLink {
+  id: number;
+  title: string;
+  url: string;
+  description?: string;
+}

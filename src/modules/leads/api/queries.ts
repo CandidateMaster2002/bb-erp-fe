@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/client';
-import type { Lead, FollowUp, PaginatedResponse, CategoryGroup } from '../types';
+import type { Lead, FollowUp, PaginatedResponse, CategoryGroup, LeadLink } from '../types';
 
 export const leadsKeys = {
   all: ['leads'] as const,
@@ -333,3 +333,53 @@ export const useUpdateLeadDetail = () => {
     },
   });
 };
+
+export const useLeadLinks = (leadId: string | number) => {
+  return useQuery({
+    queryKey: ["leads", "links", leadId],
+    queryFn: async () => {
+      const { data } = await api.get<LeadLink[]>(`/leads/${leadId}/links`);
+      return data;
+    },
+    enabled: !!leadId,
+  });
+};
+
+export const useCreateLeadLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ leadId, link }: { leadId: string | number; link: Partial<LeadLink> }) => {
+      const { data } = await api.post(`/leads/${leadId}/links`, link);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", "links", variables.leadId] });
+    },
+  });
+};
+
+export const useUpdateLeadLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ linkId, link }: { linkId: string | number; link: Partial<LeadLink> }) => {
+      const { data } = await api.put(`/leads/links/${linkId}`, link);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads", "links"] });
+    },
+  });
+};
+
+export const useDeleteLeadLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (linkId: string | number) => {
+      await api.delete(`/leads/links/${linkId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads", "links"] });
+    },
+  });
+};
+
