@@ -69,6 +69,27 @@ export default function LeadsList() {
   
   if (activeFilterId) currentFilters.filterId = activeFilterId;
 
+  // Global preference: Hide dead leads unless explicitly filtering by it
+  const hideDeadLeads = localStorage.getItem('hideDeadLeads') !== 'false';
+  let deadCategoryId = '';
+  if (categories) {
+    for (const group of categories) {
+      const deadCat = group.values?.find(v => v.name.toLowerCase() === 'dead' || v.name.toLowerCase() === 'dead lead');
+      if (deadCat) {
+        deadCategoryId = deadCat.id.toString();
+        break;
+      }
+    }
+  }
+
+  if (hideDeadLeads && deadCategoryId && !categoryIdsParam.includes(deadCategoryId)) {
+    // Only exclude if it's not being explicitly searched for
+    const searchLower = debouncedSearch.toLowerCase();
+    if (!searchLower.includes('dead')) {
+      currentFilters.excludeCategoryId = deadCategoryId;
+    }
+  }
+
   const { data, isLoading } = useLeadsList(currentFilters);
 
   const handleSaveFilter = () => {
