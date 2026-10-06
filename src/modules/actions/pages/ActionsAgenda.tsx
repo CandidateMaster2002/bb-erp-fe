@@ -13,11 +13,15 @@ import { Link } from 'react-router-dom';
 import TasksView from '../components/TasksView';
 import ScheduleFollowUpModal from '../../leads/components/ScheduleFollowUpModal';
 
-type ViewMode = 'today' | 'tomorrow' | 'week';
+type ViewMode = 'today' | 'tomorrow' | 'week' | 'custom';
 
 export default function ActionsAgenda() {
   const [activeTab, setActiveTab] = useState<'all' | 'leads' | 'tasks'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('today');
+  
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
 
@@ -27,6 +31,9 @@ export default function ActionsAgenda() {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
   const weekQuery = useActionsByRange(format(weekStart, 'yyyy-MM-dd'), format(weekEnd, 'yyyy-MM-dd'));
+
+  const customDateQuery = useActionsByDate(customStartDate);
+  const customRangeQuery = useActionsByRange(customStartDate, customEndDate);
 
   const completeAction = useCompleteLogAction();
   const cancelAction = useCancelLogAction();
@@ -61,8 +68,18 @@ export default function ActionsAgenda() {
   let currentQuery = todayQuery;
   if (viewMode === 'tomorrow') currentQuery = tomorrowQuery;
   if (viewMode === 'week') currentQuery = weekQuery;
+  if (viewMode === 'custom') {
+    if (customStartDate && customEndDate) currentQuery = customRangeQuery;
+    else if (customStartDate) currentQuery = customDateQuery;
+  }
 
   const { data: actions, isLoading } = currentQuery;
+
+  let taskFilterOverride: any = viewMode;
+  if (viewMode === 'custom') {
+    if (customStartDate && customEndDate) taskFilterOverride = { type: 'custom-range', from: customStartDate, to: customEndDate };
+    else if (customStartDate) taskFilterOverride = { type: 'custom-date', date: customStartDate };
+  }
 
   const now = startOfDay(new Date());
 
@@ -113,6 +130,40 @@ export default function ActionsAgenda() {
           >
             This Week
           </button>
+          
+          <div className="flex items-center gap-1 border-l border-gray-200 dark:border-zinc-700 pl-2 ml-1">
+            <input 
+              type="date"
+              value={customStartDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomStartDate(val);
+                setViewMode('custom');
+              }}
+              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
+                viewMode === 'custom' && customStartDate
+                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
+                  : 'border-gray-200 dark:border-zinc-700 dark:text-gray-300'
+              }`}
+              title="Start Date"
+            />
+            <span className="text-gray-400 text-xs px-1">to</span>
+            <input 
+              type="date"
+              value={customEndDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomEndDate(val);
+                setViewMode('custom');
+              }}
+              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
+                viewMode === 'custom' && customEndDate
+                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
+                  : 'border-gray-200 dark:border-zinc-700 dark:text-gray-300'
+              }`}
+              title="End Date (Optional)"
+            />
+          </div>
         </div>
         )}
       </div>
@@ -234,7 +285,7 @@ export default function ActionsAgenda() {
         {activeTab === 'all' && (
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-zinc-700">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">My To-Do List</h2>
-            <TasksView hideFilters filterOverride={viewMode === 'today' ? 'today' : viewMode === 'tomorrow' ? 'tomorrow' : 'week'} />
+            <TasksView hideFilters filterOverride={taskFilterOverride} />
           </div>
         )}
       </div>

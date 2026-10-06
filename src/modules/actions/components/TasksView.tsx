@@ -15,7 +15,7 @@ import {
 import type { Task } from '../api/tasks';
 import NewTaskModal from './NewTaskModal';
 
-type TaskFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled';
+type TaskFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled' | 'custom-date' | 'custom-range';
 
 export default function TasksView({ hideFilters, filterOverride }: { hideFilters?: boolean; filterOverride?: any }) {
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -24,6 +24,15 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const [postponeDateVal, setPostponeDateVal] = useState<string>('');
   const [postponeTimeVal, setPostponeTimeVal] = useState<string>('');
 
+  const [customDate, setCustomDate] = useState<string>('');
+  const [customRange, setCustomRange] = useState<{from: string; to: string}>({ from: '', to: '' });
+
+  const activeFilter = filterOverride || filter;
+
+  const customDateStr = typeof activeFilter === 'object' && activeFilter.type === 'custom-date' ? activeFilter.date : filter === 'custom-date' ? customDate : '';
+  const customRangeFrom = typeof activeFilter === 'object' && activeFilter.type === 'custom-range' ? activeFilter.from : filter === 'custom-range' ? customRange.from : '';
+  const customRangeTo = typeof activeFilter === 'object' && activeFilter.type === 'custom-range' ? activeFilter.to : filter === 'custom-range' ? customRange.to : '';
+
   const allQuery = useTasksByStatus('PENDING');
   const todayQuery = useTasksToday();
   const tomorrowQuery = useTasksByDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -31,6 +40,8 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
     format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), 
     format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
   );
+  const customDateQuery = useTasksByDate(customDateStr);
+  const customRangeQuery = useTasksByRange(customRangeFrom, customRangeTo);
   const completedQuery = useTasksByStatus('COMPLETED');
   const cancelledQuery = useTasksByStatus('CANCELLED');
 
@@ -38,13 +49,18 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const cancelMutation = useCancelTask();
   const updateMutation = useUpdateTask();
 
-  const activeFilter = filterOverride || filter;
   let currentQuery = allQuery;
   if (activeFilter === 'today') currentQuery = todayQuery;
   if (activeFilter === 'tomorrow') currentQuery = tomorrowQuery;
   if (activeFilter === 'week') currentQuery = weekQuery;
   if (activeFilter === 'completed') currentQuery = completedQuery;
   if (activeFilter === 'cancelled') currentQuery = cancelledQuery;
+  if (activeFilter === 'custom-date') currentQuery = customDateQuery;
+  if (activeFilter === 'custom-range') currentQuery = customRangeQuery;
+  if (typeof activeFilter === 'object') {
+    if (activeFilter.type === 'custom-date') currentQuery = customDateQuery;
+    if (activeFilter.type === 'custom-range') currentQuery = customRangeQuery;
+  }
 
   const { data: tasks, isLoading } = currentQuery;
   const now = startOfDay(new Date());
@@ -82,6 +98,43 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
               {f}
             </button>
           ))}
+          <div className="flex items-center gap-1 border-l border-gray-300 dark:border-zinc-700 pl-2 ml-1">
+            <input 
+              type="date"
+              value={filter === 'custom-range' ? customRange.from : filter === 'custom-date' ? customDate : ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (filter === 'custom-range') {
+                  setCustomRange(prev => ({ ...prev, from: val }));
+                } else {
+                  setCustomDate(val);
+                  setFilter('custom-date');
+                }
+              }}
+              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
+                filter === 'custom-date' || (filter === 'custom-range' && customRange.from)
+                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
+                  : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
+              }`}
+              title="Start Date"
+            />
+            <span className="text-gray-400 text-xs px-1">to</span>
+            <input 
+              type="date"
+              value={filter === 'custom-range' ? customRange.to : ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomRange(prev => ({ from: filter === 'custom-date' ? customDate : prev.from, to: val }));
+                setFilter('custom-range');
+              }}
+              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
+                filter === 'custom-range' && customRange.to
+                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
+                  : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
+              }`}
+              title="End Date (Optional)"
+            />
+          </div>
         </div>
         <button 
           onClick={() => setIsNewTaskModalOpen(true)}

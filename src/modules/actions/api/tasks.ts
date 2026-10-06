@@ -26,12 +26,14 @@ export const useTasksToday = () => useQuery({
 
 export const useTasksByDate = (date: string) => useQuery({
   queryKey: taskKeys.date(date),
-  queryFn: async () => (await api.get<Task[]>(`/tasks/date/${date}`)).data
+  queryFn: async () => (await api.get<Task[]>(`/tasks/date/${date}`)).data,
+  enabled: !!date,
 });
 
 export const useTasksByRange = (from: string, to: string) => useQuery({
   queryKey: taskKeys.range(from, to),
-  queryFn: async () => (await api.get<Task[]>('/tasks/between', { params: { from, to } })).data
+  queryFn: async () => (await api.get<Task[]>('/tasks/between', { params: { from, to } })).data,
+  enabled: !!from && !!to,
 });
 
 export const useTasksByStatus = (status: 'PENDING' | 'COMPLETED' | 'CANCELLED') => useQuery({
