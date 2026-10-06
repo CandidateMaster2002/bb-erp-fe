@@ -22,7 +22,8 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
 
   const [comment, setComment] = useState('');
   const [nextAction, setNextAction] = useState('');
-  const [nextActionDate, setNextActionDate] = useState('');
+  const [nextActionDateVal, setNextActionDateVal] = useState('');
+  const [nextActionTimeVal, setNextActionTimeVal] = useState('');
   
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
 
@@ -34,24 +35,30 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
   const [editingLogId, setEditingLogId] = useState<string | number | null>(null);
   const [editComment, setEditComment] = useState('');
   const [editNextAction, setEditNextAction] = useState('');
-  const [editNextActionDate, setEditNextActionDate] = useState('');
+  const [editNextActionDateVal, setEditNextActionDateVal] = useState('');
+  const [editNextActionTimeVal, setEditNextActionTimeVal] = useState('');
 
   const handleAddLog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!comment.trim() && !nextAction.trim() && !nextActionDate.trim()) return;
+    if (!comment.trim() && !nextAction.trim() && !nextActionDateVal.trim()) return;
+
+    const finalIso = nextActionDateVal 
+      ? (nextActionTimeVal ? new Date(`${nextActionDateVal}T${nextActionTimeVal}`).toISOString() : new Date(nextActionDateVal).toISOString())
+      : undefined;
 
     await createLog.mutateAsync({
       leadId,
       log: {
         comment: comment.trim() || undefined,
         nextAction: nextAction.trim() || undefined,
-        nextActionDate: nextActionDate ? new Date(nextActionDate).toISOString() : undefined,
+        nextActionDate: finalIso,
       }
     });
 
     setComment('');
     setNextAction('');
-    setNextActionDate('');
+    setNextActionDateVal('');
+    setNextActionTimeVal('');
   };
 
   const handleDelete = async (logId: string | number) => {
@@ -65,22 +72,31 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
     setEditComment(log.comment || '');
     setEditNextAction(log.nextAction || '');
     let localDateStr = '';
+    let localTimeStr = '';
     if (log.nextActionDate) {
       const d = new Date(log.nextActionDate);
       if (!isNaN(d.getTime())) {
-        localDateStr = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+        localDateStr = iso.slice(0, 10);
+        const tp = iso.slice(11, 16);
+        localTimeStr = tp !== '00:00' ? tp : '';
       }
     }
-    setEditNextActionDate(localDateStr);
+    setEditNextActionDateVal(localDateStr);
+    setEditNextActionTimeVal(localTimeStr);
   };
 
   const handleSaveEdit = async (logId: string | number) => {
+    const finalEditIso = editNextActionDateVal 
+      ? (editNextActionTimeVal ? new Date(`${editNextActionDateVal}T${editNextActionTimeVal}`).toISOString() : new Date(editNextActionDateVal).toISOString())
+      : undefined;
+
     await updateLog.mutateAsync({
       logId,
       log: { 
         comment: editComment.trim() || undefined,
         nextAction: editNextAction.trim() || undefined,
-        nextActionDate: editNextActionDate ? new Date(editNextActionDate).toISOString() : undefined,
+        nextActionDate: finalEditIso,
       }
     });
     setEditingLogId(null);
@@ -112,17 +128,23 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
               className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-[22rem] flex gap-2">
             <input
-              type="datetime-local"
-              value={nextActionDate}
-              onChange={e => setNextActionDate(e.target.value)}
+              type="date"
+              value={nextActionDateVal}
+              onChange={e => setNextActionDateVal(e.target.value)}
+              className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+            />
+            <input
+              type="time"
+              value={nextActionTimeVal}
+              onChange={e => setNextActionTimeVal(e.target.value)}
               className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <button
             type="submit"
-            disabled={!comment.trim() && !nextAction.trim() && !nextActionDate.trim()}
+            disabled={!comment.trim() && !nextAction.trim() && !nextActionDateVal.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition whitespace-nowrap"
           >
             Add Log
@@ -161,11 +183,17 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
                         className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                    <div className="w-full sm:w-56">
+                    <div className="w-full sm:w-[22rem] flex gap-2">
                       <input
-                        type="datetime-local"
-                        value={editNextActionDate}
-                        onChange={e => setEditNextActionDate(e.target.value)}
+                        type="date"
+                        value={editNextActionDateVal}
+                        onChange={e => setEditNextActionDateVal(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                      <input
+                        type="time"
+                        value={editNextActionTimeVal}
+                        onChange={e => setEditNextActionTimeVal(e.target.value)}
                         className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>

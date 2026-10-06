@@ -21,7 +21,8 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [postponeTaskId, setPostponeTaskId] = useState<number | null>(null);
-  const [postponeDate, setPostponeDate] = useState<string>('');
+  const [postponeDateVal, setPostponeDateVal] = useState<string>('');
+  const [postponeTimeVal, setPostponeTimeVal] = useState<string>('');
 
   const allQuery = useTasksByStatus('PENDING');
   const todayQuery = useTasksToday();
@@ -49,13 +50,18 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const now = startOfDay(new Date());
 
   const handlePostpone = async (id: number) => {
-    if (!postponeDate) return;
+    if (!postponeDateVal) return;
+    const finalIso = postponeTimeVal 
+      ? new Date(`${postponeDateVal}T${postponeTimeVal}`).toISOString() 
+      : new Date(postponeDateVal).toISOString();
+
     await updateMutation.mutateAsync({
       id,
-      data: { deadline: new Date(postponeDate).toISOString() }
+      data: { deadline: finalIso }
     });
     setPostponeTaskId(null);
-    setPostponeDate('');
+    setPostponeDateVal('');
+    setPostponeTimeVal('');
   };
 
   return (
@@ -150,7 +156,10 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                           setPostponeTaskId(task.id);
                           const d = task.deadline ? new Date(task.deadline) : new Date();
                           if (!isNaN(d.getTime())) {
-                            setPostponeDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                            const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                            setPostponeDateVal(localIso.slice(0, 10));
+                            const timePart = localIso.slice(11, 16);
+                            setPostponeTimeVal(task.deadline && timePart !== '00:00' ? timePart : '');
                           }
                         }}
                         className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
@@ -163,12 +172,20 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
 
                 {postponeTaskId === task.id && (
                   <div className="pt-3 border-t border-gray-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-3 items-center">
-                    <input
-                      type="datetime-local"
-                      value={postponeDate}
-                      onChange={(e) => setPostponeDate(e.target.value)}
-                      className="flex-1 w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-                    />
+                    <div className="flex-1 flex gap-2 w-full">
+                      <input
+                        type="date"
+                        value={postponeDateVal}
+                        onChange={(e) => setPostponeDateVal(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                      <input
+                        type="time"
+                        value={postponeTimeVal}
+                        onChange={(e) => setPostponeTimeVal(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button 
                         onClick={() => setPostponeTaskId(null)}
@@ -178,7 +195,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                       </button>
                       <button 
                         onClick={() => handlePostpone(task.id)}
-                        disabled={!postponeDate}
+                        disabled={!postponeDateVal}
                         className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md transition shadow-sm"
                       >
                         Save Date
@@ -196,8 +213,8 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
         isOpen={isNewTaskModalOpen} 
         onClose={() => setIsNewTaskModalOpen(false)}
         defaultDate={
-          filter === 'tomorrow' ? format(addDays(new Date(), 1), "yyyy-MM-dd'T'09:00") : 
-          filter === 'today' ? format(new Date(), "yyyy-MM-dd'T'09:00") : 
+          filter === 'tomorrow' ? format(addDays(new Date(), 1), "yyyy-MM-dd") : 
+          filter === 'today' ? format(new Date(), "yyyy-MM-dd") : 
           ''
         }
       />

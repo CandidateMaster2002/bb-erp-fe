@@ -5,13 +5,15 @@ import { X, Calendar } from 'lucide-react';
 export default function NewTaskModal({ isOpen, onClose, defaultDate = '' }: { isOpen: boolean; onClose: () => void; defaultDate?: string; }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState(defaultDate);
+  const [deadlineDate, setDeadlineDate] = useState(defaultDate);
+  const [deadlineTime, setDeadlineTime] = useState('');
   
   useEffect(() => {
     if (isOpen) {
       setTitle('');
       setDescription('');
-      setDeadline(defaultDate);
+      setDeadlineDate(defaultDate);
+      setDeadlineTime('');
     }
   }, [isOpen, defaultDate]);
 
@@ -23,15 +25,20 @@ export default function NewTaskModal({ isOpen, onClose, defaultDate = '' }: { is
     e.preventDefault();
     if (!title.trim()) return;
 
+    const finalIso = deadlineDate 
+      ? (deadlineTime ? new Date(`${deadlineDate}T${deadlineTime}`).toISOString() : new Date(deadlineDate).toISOString())
+      : undefined;
+
     await createMutation.mutateAsync({
       title: title.trim(),
       description: description.trim() || undefined,
-      deadline: deadline ? new Date(deadline).toISOString() : undefined,
+      deadline: finalIso,
     });
 
     setTitle('');
     setDescription('');
-    setDeadline('');
+    setDeadlineDate('');
+    setDeadlineTime('');
     onClose();
   };
 
@@ -80,12 +87,20 @@ export default function NewTaskModal({ isOpen, onClose, defaultDate = '' }: { is
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Deadline (Optional)
             </label>
-            <input
-              type="datetime-local"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-            />
+            <div className="flex gap-2 w-full">
+              <input
+                type="date"
+                value={deadlineDate}
+                onChange={(e) => setDeadlineDate(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
+              />
+              <input
+                type="time"
+                value={deadlineTime}
+                onChange={(e) => setDeadlineTime(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
+              />
+            </div>
           </div>
 
           <div className="pt-4 flex items-center justify-end gap-2">

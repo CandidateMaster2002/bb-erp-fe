@@ -16,7 +16,8 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [comment, setComment] = useState('');
   const [nextAction, setNextAction] = useState('');
-  const [nextActionDate, setNextActionDate] = useState('');
+  const [nextActionDateVal, setNextActionDateVal] = useState('');
+  const [nextActionTimeVal, setNextActionTimeVal] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +25,8 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
       setSelectedCategoryIds(lead.categories?.map(c => Number(c.id)) || []);
       setComment('');
       setNextAction('');
-      setNextActionDate('');
+      setNextActionDateVal('');
+      setNextActionTimeVal('');
       setToastMessage(null);
     }
   }, [lead]);
@@ -59,12 +61,16 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
       }));
 
       if (comment.trim() || nextAction.trim()) {
+        const finalIso = nextActionDateVal 
+          ? (nextActionTimeVal ? new Date(`${nextActionDateVal}T${nextActionTimeVal}`).toISOString() : new Date(nextActionDateVal).toISOString())
+          : undefined;
+
         promises.push(createLogMutation.mutateAsync({
           leadId: lead.id,
           log: {
             comment: comment.trim(),
             nextAction: nextAction.trim(),
-            nextActionDate: nextActionDate || undefined
+            nextActionDate: finalIso
           }
         }));
       }
@@ -153,12 +159,20 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Next Action Date (Optional)</label>
-                  <input
-                    type="datetime-local"
-                    value={nextActionDate}
-                    onChange={e => setNextActionDate(e.target.value)}
-                    className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
+                  <div className="flex gap-2 w-full">
+                    <input
+                      type="date"
+                      value={nextActionDateVal}
+                      onChange={e => setNextActionDateVal(e.target.value)}
+                      className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                    <input
+                      type="time"
+                      value={nextActionTimeVal}
+                      onChange={e => setNextActionTimeVal(e.target.value)}
+                      className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

@@ -32,7 +32,8 @@ export default function ActionsAgenda() {
   const cancelAction = useCancelLogAction();
   const updateLog = useUpdateLeadLog();
   const [postponeActionId, setPostponeActionId] = useState<string | number | null>(null);
-  const [postponeDate, setPostponeDate] = useState<string>('');
+  const [postponeDateVal, setPostponeDateVal] = useState<string>('');
+  const [postponeTimeVal, setPostponeTimeVal] = useState<string>('');
 
   const handleCompleteLeadAction = async (action: any) => {
     await completeAction.mutateAsync(action.id);
@@ -41,15 +42,20 @@ export default function ActionsAgenda() {
   };
 
   const handleSavePostpone = async (logId: string | number) => {
-    if (!postponeDate) return;
+    if (!postponeDateVal) return;
+    const finalIso = postponeTimeVal 
+      ? new Date(`${postponeDateVal}T${postponeTimeVal}`).toISOString() 
+      : new Date(postponeDateVal).toISOString();
+
     await updateLog.mutateAsync({
       logId,
       log: {
-        nextActionDate: new Date(postponeDate).toISOString()
+        nextActionDate: finalIso
       }
     });
     setPostponeActionId(null);
-    setPostponeDate('');
+    setPostponeDateVal('');
+    setPostponeTimeVal('');
   };
 
   let currentQuery = todayQuery;
@@ -174,7 +180,10 @@ export default function ActionsAgenda() {
                       setPostponeActionId(action.id);
                       const d = action.nextActionDate ? new Date(action.nextActionDate) : new Date();
                       if (!isNaN(d.getTime())) {
-                        setPostponeDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                        const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                        setPostponeDateVal(localIso.slice(0, 10));
+                        const timePart = localIso.slice(11, 16);
+                        setPostponeTimeVal(action.nextActionDate && timePart !== '00:00' ? timePart : '');
                       }
                     }}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
@@ -186,12 +195,20 @@ export default function ActionsAgenda() {
 
                 {postponeActionId === action.id && (
                   <div className="pt-3 border-t border-gray-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-3 items-center">
-                    <input
-                      type="datetime-local"
-                      value={postponeDate}
-                      onChange={(e) => setPostponeDate(e.target.value)}
-                      className="flex-1 w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-                    />
+                    <div className="flex-1 flex gap-2 w-full">
+                      <input
+                        type="date"
+                        value={postponeDateVal}
+                        onChange={(e) => setPostponeDateVal(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                      <input
+                        type="time"
+                        value={postponeTimeVal}
+                        onChange={(e) => setPostponeTimeVal(e.target.value)}
+                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button 
                         onClick={() => setPostponeActionId(null)}
@@ -201,7 +218,7 @@ export default function ActionsAgenda() {
                       </button>
                       <button 
                         onClick={() => handleSavePostpone(action.id)}
-                        disabled={!postponeDate}
+                        disabled={!postponeDateVal}
                         className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md transition shadow-sm"
                       >
                         Save Date
