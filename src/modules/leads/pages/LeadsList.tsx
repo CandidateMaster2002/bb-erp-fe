@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useUpdateLeadDetail } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, MessageSquarePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
+import ScheduleFollowUpModal from '../components/ScheduleFollowUpModal';
 import type { Lead } from '../types';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
@@ -31,6 +32,7 @@ export default function LeadsList() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('');
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
+  const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table'); // Default to table for denser view
   
   // New filter states
@@ -232,6 +234,13 @@ export default function LeadsList() {
                           </span>
                         ))}
                         <button 
+                          onClick={(e) => { e.preventDefault(); setFollowUpLeadId(lead.id); }}
+                          className="ml-1 p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded-md transition"
+                          title="Add Log"
+                        >
+                          <MessageSquarePlus className="w-4 h-4" />
+                        </button>
+                        <button 
                           onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
                           className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
                           title="Quick Update"
@@ -330,6 +339,13 @@ export default function LeadsList() {
                             </button>
                           )}
                           <button 
+                            onClick={(e) => { e.preventDefault(); setFollowUpLeadId(lead.id); }}
+                            className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition"
+                            title="Add Log"
+                          >
+                            <MessageSquarePlus className="w-4 h-4" />
+                          </button>
+                          <button 
                             onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
                             title="Quick Update"
@@ -352,6 +368,11 @@ export default function LeadsList() {
       </div>
 
       <QuickUpdateModal lead={quickUpdateLead} onClose={() => setQuickUpdateLead(null)} />
+      <ScheduleFollowUpModal 
+        isOpen={!!followUpLeadId} 
+        onClose={() => setFollowUpLeadId(null)} 
+        leadId={followUpLeadId} 
+      />
     </div>
   );
 }
