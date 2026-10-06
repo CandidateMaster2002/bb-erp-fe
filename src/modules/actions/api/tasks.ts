@@ -49,6 +49,14 @@ export const useCreateTask = () => {
   });
 };
 
+export const useCreateRecurringTask = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { title: string, description?: string, daysOfWeek: string[], timeOfDay?: string }) => (await api.post('/tasks/recurring', data)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: taskKeys.all })
+  });
+};
+
 export const useUpdateTask = () => {
   const qc = useQueryClient();
   return useMutation({
