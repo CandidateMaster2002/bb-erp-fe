@@ -10,6 +10,7 @@ import {
 import { CheckCircle2, XCircle, Trash2, Edit2, Calendar, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import type { LeadLog } from '../types';
+import ScheduleFollowUpModal from './ScheduleFollowUpModal';
 
 export default function LeadActivityLog({ leadId }: { leadId: string }) {
   const { data: logs, isLoading } = useLeadLogs(leadId);
@@ -22,6 +23,13 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
   const [comment, setComment] = useState('');
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState('');
+  
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+
+  const handleCompleteAction = async (logId: string | number) => {
+    await completeAction.mutateAsync(logId);
+    setIsFollowUpModalOpen(true);
+  };
   
   const [editingLogId, setEditingLogId] = useState<string | number | null>(null);
   const [editComment, setEditComment] = useState('');
@@ -213,7 +221,7 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
                   {log.actionStatus === 'PENDING' && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => completeAction.mutateAsync(log.id)}
+                        onClick={() => handleCompleteAction(log.id)}
                         className="flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded transition"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" /> Complete
@@ -234,6 +242,12 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
           ))
         )}
       </div>
+
+      <ScheduleFollowUpModal 
+        isOpen={isFollowUpModalOpen}
+        onClose={() => setIsFollowUpModalOpen(false)}
+        leadId={leadId}
+      />
     </div>
   );
 }

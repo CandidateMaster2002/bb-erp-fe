@@ -11,12 +11,15 @@ import { CheckCircle2, XCircle, User, Clock } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
 import TasksView from '../components/TasksView';
+import ScheduleFollowUpModal from '../../leads/components/ScheduleFollowUpModal';
 
 type ViewMode = 'today' | 'tomorrow' | 'week';
 
 export default function ActionsAgenda() {
   const [activeTab, setActiveTab] = useState<'leads' | 'tasks'>('leads');
   const [viewMode, setViewMode] = useState<ViewMode>('today');
+  const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
 
   const todayQuery = useActionsToday();
   const tomorrowQuery = useActionsByDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
@@ -30,6 +33,12 @@ export default function ActionsAgenda() {
   const updateLog = useUpdateLeadLog();
   const [postponeActionId, setPostponeActionId] = useState<string | number | null>(null);
   const [postponeDate, setPostponeDate] = useState<string>('');
+
+  const handleCompleteLeadAction = async (action: any) => {
+    await completeAction.mutateAsync(action.id);
+    setFollowUpLeadId(action.leadId);
+    setIsFollowUpModalOpen(true);
+  };
 
   const handleSavePostpone = async (logId: string | number) => {
     if (!postponeDate) return;
@@ -143,7 +152,7 @@ export default function ActionsAgenda() {
 
                 <div className="flex sm:flex-col gap-2 shrink-0">
                   <button 
-                    onClick={() => completeAction.mutateAsync(action.id)}
+                    onClick={() => handleCompleteLeadAction(action)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
                   >
                     <CheckCircle2 className="w-4 h-4" /> Complete
@@ -200,6 +209,12 @@ export default function ActionsAgenda() {
         )}
       </div>
       )}
+
+      <ScheduleFollowUpModal 
+        isOpen={isFollowUpModalOpen}
+        onClose={() => setIsFollowUpModalOpen(false)}
+        leadId={followUpLeadId}
+      />
     </div>
   );
 }
