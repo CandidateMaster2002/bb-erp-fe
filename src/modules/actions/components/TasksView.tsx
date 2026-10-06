@@ -17,7 +17,7 @@ import NewTaskModal from './NewTaskModal';
 
 type TaskFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled';
 
-export default function TasksView() {
+export default function TasksView({ hideFilters, filterOverride }: { hideFilters?: boolean; filterOverride?: any }) {
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [postponeTaskId, setPostponeTaskId] = useState<number | null>(null);
@@ -37,12 +37,13 @@ export default function TasksView() {
   const cancelMutation = useCancelTask();
   const updateMutation = useUpdateTask();
 
+  const activeFilter = filterOverride || filter;
   let currentQuery = allQuery;
-  if (filter === 'today') currentQuery = todayQuery;
-  if (filter === 'tomorrow') currentQuery = tomorrowQuery;
-  if (filter === 'week') currentQuery = weekQuery;
-  if (filter === 'completed') currentQuery = completedQuery;
-  if (filter === 'cancelled') currentQuery = cancelledQuery;
+  if (activeFilter === 'today') currentQuery = todayQuery;
+  if (activeFilter === 'tomorrow') currentQuery = tomorrowQuery;
+  if (activeFilter === 'week') currentQuery = weekQuery;
+  if (activeFilter === 'completed') currentQuery = completedQuery;
+  if (activeFilter === 'cancelled') currentQuery = cancelledQuery;
 
   const { data: tasks, isLoading } = currentQuery;
   const now = startOfDay(new Date());
@@ -58,9 +59,9 @@ export default function TasksView() {
   };
 
   return (
-    <div className="space-y-6 flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4 pt-1">
+    <div className={`space-y-6 ${hideFilters ? "" : "flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4 pt-1"}`}>
       {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {!hideFilters && (<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex flex-wrap items-center gap-2 bg-gray-100/80 dark:bg-zinc-800/80 p-1 rounded-xl">
           {(['all', 'today', 'tomorrow', 'week', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
             <button
@@ -82,10 +83,10 @@ export default function TasksView() {
         >
           <Plus className="w-4 h-4" /> New Task
         </button>
-      </div>
+      </div>)}
 
       {/* Task List */}
-      <div className="space-y-3 pb-24">
+      <div className={`space-y-3 ${hideFilters ? "pb-4" : "pb-24"}`}>
         {isLoading ? (
           <div className="text-center py-12 text-gray-500">Loading tasks...</div>
         ) : !tasks || tasks.length === 0 ? (
@@ -100,7 +101,7 @@ export default function TasksView() {
             const isOverdue = deadlineDate && task.status === 'PENDING' && isBefore(deadlineDate, now);
 
             return (
-              <div key={task.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
+              <div key={task.id} className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -131,16 +132,16 @@ export default function TasksView() {
                   </div>
 
                   {task.status === 'PENDING' && (
-                    <div className="flex sm:flex-col gap-2 shrink-0">
+                    <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 mt-3 sm:mt-0">
                       <button 
                         onClick={() => completeMutation.mutateAsync(task.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
                       >
                         <CheckCircle2 className="w-4 h-4" /> Complete
                       </button>
                       <button 
                         onClick={() => cancelMutation.mutateAsync(task.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
                       >
                         <XCircle className="w-4 h-4" /> Cancel
                       </button>
@@ -152,7 +153,7 @@ export default function TasksView() {
                             setPostponeDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                           }
                         }}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
                       >
                         <Clock className="w-4 h-4" /> Postpone
                       </button>

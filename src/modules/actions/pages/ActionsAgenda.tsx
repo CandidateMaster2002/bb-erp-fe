@@ -16,7 +16,7 @@ import ScheduleFollowUpModal from '../../leads/components/ScheduleFollowUpModal'
 type ViewMode = 'today' | 'tomorrow' | 'week';
 
 export default function ActionsAgenda() {
-  const [activeTab, setActiveTab] = useState<'leads' | 'tasks'>('leads');
+  const [activeTab, setActiveTab] = useState<'all' | 'leads' | 'tasks'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('today');
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
@@ -67,6 +67,12 @@ export default function ActionsAgenda() {
           <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700">
             <button 
+              onClick={() => setActiveTab('all')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeTab === 'all' ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+            >
+              All
+            </button>
+            <button 
               onClick={() => setActiveTab('leads')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${activeTab === 'leads' ? 'bg-white text-gray-900 shadow-sm dark:bg-zinc-700 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
             >
@@ -81,7 +87,7 @@ export default function ActionsAgenda() {
           </div>
         </div>
         
-        {activeTab === 'leads' && (
+        {(activeTab === 'leads' || activeTab === 'all') && (
         <div className="flex items-center gap-2 bg-white dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm">
           <button 
             onClick={() => setViewMode('today')}
@@ -123,7 +129,7 @@ export default function ActionsAgenda() {
             const isOverdue = actionDate && isBefore(actionDate, now);
 
             return (
-              <div key={action.id} className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
+              <div key={action.id} className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -150,16 +156,16 @@ export default function ActionsAgenda() {
                   )}
                 </div>
 
-                <div className="flex sm:flex-col gap-2 shrink-0">
+                <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 sm:items-center mt-3 sm:mt-0">
                   <button 
                     onClick={() => handleCompleteLeadAction(action)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
                   >
                     <CheckCircle2 className="w-4 h-4" /> Complete
                   </button>
                   <button 
                     onClick={() => cancelAction.mutateAsync(action.id)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
                   >
                     <XCircle className="w-4 h-4" /> Cancel
                   </button>
@@ -171,7 +177,7 @@ export default function ActionsAgenda() {
                         setPostponeDate(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                       }
                     }}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
                   >
                     <Clock className="w-4 h-4" /> Postpone
                   </button>
@@ -206,6 +212,13 @@ export default function ActionsAgenda() {
               </div>
             );
           })
+        )}
+        
+        {activeTab === 'all' && (
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-zinc-700">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">My To-Do List</h2>
+            <TasksView hideFilters filterOverride={viewMode === 'today' ? 'today' : viewMode === 'tomorrow' ? 'tomorrow' : 'week'} />
+          </div>
         )}
       </div>
       )}
