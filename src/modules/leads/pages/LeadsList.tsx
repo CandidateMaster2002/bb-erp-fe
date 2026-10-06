@@ -59,7 +59,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     currentFilters.q = debouncedSearch;
     currentFilters.search = debouncedSearch;
   }
-  if (hasMobileNo) currentFilters.hasMobileNo = true;
+  if (hasMobileNo && recordType !== 'COLLABORATOR') currentFilters.hasMobileNo = true;
   
   // Pass all selected category values. The backend expects ?categoryId=1&categoryId=4
   const categoryIdsParam = Object.values(selectedCategoryIds).filter(Boolean);
@@ -171,17 +171,21 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
       {/* Filter Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-          <input 
-            type="checkbox" 
-            checked={hasMobileNo}
-            onChange={(e) => setHasMobileNo(e.target.checked)}
-            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-          />
-          Has Mobile No
-        </label>
+        {recordType !== 'COLLABORATOR' && (
+          <>
+            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={hasMobileNo}
+                onChange={(e) => setHasMobileNo(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              Has Mobile No
+            </label>
 
-        <div className="h-4 w-px bg-gray-300 dark:bg-zinc-600 hidden sm:block"></div>
+            <div className="h-4 w-px bg-gray-300 dark:bg-zinc-600 hidden sm:block"></div>
+          </>
+        )}
 
         {Array.isArray(categories) && categories.map(group => (
           <select
