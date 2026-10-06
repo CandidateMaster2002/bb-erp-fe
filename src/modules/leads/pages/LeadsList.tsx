@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList, useCategories, useUpdateLeadDetail } from '../api/queries';
+import { useLeadsList, useCategories, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
 import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, MessageSquarePlus } from 'lucide-react';
 import { format } from 'date-fns';
@@ -27,6 +27,8 @@ export default function LeadsList() {
       setEditingContactId(null);
     }
   };
+
+  const deleteLead = useDeleteLead();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -73,6 +75,12 @@ export default function LeadsList() {
     const name = prompt('Enter a name for this filter:');
     if (name) {
       saveFilterMutation.mutate({ name, filters: { search: searchTerm } });
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string | number) => {
+    if (window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+      await deleteLead.mutateAsync(leadId);
     }
   };
 
@@ -247,6 +255,13 @@ export default function LeadsList() {
                         >
                           <Zap className="w-4 h-4" />
                         </button>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
+                          className="ml-1 p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded-md transition"
+                          title="Delete Lead"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                     <div className="mt-3 flex gap-2 flex-wrap text-xs">
@@ -351,6 +366,13 @@ export default function LeadsList() {
                             title="Quick Update"
                           >
                             <Zap className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition"
+                            title="Delete Lead"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

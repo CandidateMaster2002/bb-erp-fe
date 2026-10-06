@@ -383,3 +383,16 @@ export const useDeleteLeadLink = () => {
   });
 };
 
+
+export const useDeleteLead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string | number) => {
+      await api.delete(`/leads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
