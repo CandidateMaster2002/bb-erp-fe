@@ -9,15 +9,15 @@ export const leadsKeys = {
   details: () => [...leadsKeys.all, 'detail'] as const,
   detail: (id: string) => [...leadsKeys.details(), id] as const,
   today: () => ['today-dashboard'] as const,
-  categories: () => ['categories'] as const,
+  categories: (type?: string) => type ? ['categories', type] as const : ['categories'] as const,
 };
 
 
-export const useCategories = () => {
+export const useCategories = (type: 'LEAD' | 'COLLABORATOR' = 'LEAD') => {
   return useQuery({
-    queryKey: leadsKeys.categories(),
+    queryKey: leadsKeys.categories(type),
     queryFn: async () => {
-      const { data } = await api.get('/categories');
+      const { data } = await api.get(`/categories?type=${type}`);
       const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
       return arrayData as CategoryGroup[];
     },
@@ -128,8 +128,8 @@ export const useUpdateLeadCategories = () => {
 export const useCreateCategoryGroup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (name: string) => {
-      const { data } = await api.post('/categories', { name });
+    mutationFn: async ({ name, type = 'LEAD' }: { name: string, type?: 'LEAD' | 'COLLABORATOR' }) => {
+      const { data } = await api.post('/categories', { name, categoryType: type });
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: leadsKeys.categories() }),

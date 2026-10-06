@@ -33,9 +33,9 @@ export const router = createBrowserRouter([
         element: <LeadsList />,
       },
       {
-        path: 'leads/:id',
-        element: <LeadDetail />,
-      },
+        path: 'leads/:id', element: <LeadDetail /> },
+      { path: 'collaborators', element: <LeadsList recordType="COLLABORATOR" /> },
+      { path: 'collaborators/:id', element: <LeadDetail recordType="COLLABORATOR" /> },
       {
         path: 'pipeline',
         element: <PipelineBoard />,

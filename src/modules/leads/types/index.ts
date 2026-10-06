@@ -8,6 +8,7 @@ export interface CategoryValue {
 
 export interface CategoryGroup {
   id: string | number;
+  categoryType?: 'LEAD' | 'COLLABORATOR';
   name: string;
   values: CategoryValue[];
 }
@@ -25,6 +26,7 @@ export interface Education {
 
 export interface Lead {
   id: string;
+  recordType?: 'LEAD' | 'COLLABORATOR';
   fullName: string;
   headline?: string;
   summary?: string;

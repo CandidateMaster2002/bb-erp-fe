@@ -16,7 +16,7 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export default function LeadsList() {
+export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD' | 'COLLABORATOR' }) {
   const updateLead = useUpdateLeadDetail();
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [editingContactValue, setEditingContactValue] = useState('');
@@ -42,7 +42,7 @@ export default function LeadsList() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
 
   // Fetch filter options
-  const { data: categories } = useCategories();
+  const { data: categories } = useCategories(recordType);
   
   // Debounce the search input by 500ms
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function LeadsList() {
   const saveFilterMutation = useSaveFilter();
   const deleteFilterMutation = useDeleteFilter();
   
-  const currentFilters: any = {};
+  const currentFilters: any = { recordType };
   if (debouncedSearch) {
     currentFilters.q = debouncedSearch;
     currentFilters.search = debouncedSearch;
@@ -105,10 +105,14 @@ export default function LeadsList() {
     }
   };
 
+  const routePath = recordType === 'COLLABORATOR' ? 'collaborators' : 'leads';
+  const title = recordType === 'COLLABORATOR' ? 'Collaborators' : 'Leads';
+  
+
   return (
     <div className="p-4 h-full flex flex-col bg-gray-50 dark:bg-zinc-900">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold dark:text-white">Leads</h1>
+        <h1 className="text-2xl font-bold dark:text-white">{title}</h1>
         <div className="flex items-center space-x-2">
           {Array.isArray(filtersData) && filtersData.length > 0 && (
             <select 
@@ -196,12 +200,12 @@ export default function LeadsList() {
 
       <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? (
-          <div className="text-center py-4">Loading leads...</div>
+          <div className="text-center py-4">{`Loading ${title.toLowerCase()}...`}</div>
         ) : data?.content && data.content.length > 0 ? (
           viewMode === 'card' ? (
             <div className="space-y-3">
               {data.content.map(lead => (
-                <Link key={lead.id} to={`/leads/${lead.id}`} className="block">
+                <Link key={lead.id} to={`/${routePath}/${lead.id}`} className="block">
                   <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 min-w-0 pr-2">
@@ -317,7 +321,7 @@ export default function LeadsList() {
                   {data.content.map(lead => (
                     <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition">
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <Link to={`/leads/${lead.id}`} className="block">
+                        <Link to={`/${routePath}/${lead.id}`} className="block">
                           <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
                         </Link>
                       </td>
@@ -405,7 +409,7 @@ export default function LeadsList() {
           )
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-            No leads found. Tap + to add one.
+            {`No ${title.toLowerCase()} found. Tap + to add one.`}
           </div>
         )}
       </div>

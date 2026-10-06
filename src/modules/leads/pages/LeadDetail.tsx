@@ -12,10 +12,10 @@ import LeadDetailsTab from '../components/LeadDetailsTab';
 import LeadLinksTab from '../components/LeadLinksTab';
 import type { CategoryGroup } from '../types';
 
-export default function LeadDetail() {
+export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD' | 'COLLABORATOR' }) {
   const { id } = useParams<{ id: string }>();
   const { data: lead, isLoading } = useLeadDetail(id!);
-  const { data: categoryGroups } = useCategories();
+  const { data: categoryGroups } = useCategories(recordType);
   const updateCategoriesMutation = useUpdateLeadCategories();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'links'>('timeline');
@@ -55,7 +55,7 @@ export default function LeadDetail() {
       {/* Header */}
       <div className="bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="p-4 flex items-start gap-4">
-          <Link to="/leads" className="mt-1 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition flex-shrink-0">
+          <Link to={recordType === 'COLLABORATOR' ? '/collaborators' : '/leads'} className="mt-1 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-zinc-700 transition flex-shrink-0">
             <ArrowLeft className="w-5 h-5 dark:text-gray-200" />
           </Link>
 

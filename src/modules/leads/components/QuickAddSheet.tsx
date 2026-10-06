@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAddLead, useCategories } from '../api/queries';
 import { Plus, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 const addLeadSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -24,6 +25,9 @@ const addLeadSchema = z.object({
 type AddLeadForm = z.infer<typeof addLeadSchema>;
 
 export default function QuickAddSheet() {
+  const location = useLocation();
+  const isCollaborator = location.pathname.startsWith('/collaborators');
+  const recordType = isCollaborator ? 'COLLABORATOR' : 'LEAD';
   const [open, setOpen] = useState(false);
   const [duplicateError, setDuplicateError] = useState<{ message: string; leadId: string } | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
@@ -33,7 +37,7 @@ export default function QuickAddSheet() {
   });
 
   const addLead = useAddLead();
-  const { data: categoryGroups } = useCategories();
+  const { data: categoryGroups } = useCategories(recordType);
 
   // Handle Category Defaulting Rule
   useEffect(() => {
@@ -72,6 +76,7 @@ export default function QuickAddSheet() {
     try {
       const payload = {
         ...data,
+        recordType,
         categoryIds: selectedCategoryIds
       };
       await addLead.mutateAsync(payload);
@@ -79,7 +84,7 @@ export default function QuickAddSheet() {
     } catch (error: any) {
       if (error.response?.status === 409) {
         setDuplicateError({
-          message: 'This lead already exists!',
+          message: `This ${isCollaborator ? 'collaborator' : 'lead'} already exists!`,
           leadId: error.response.data.existingLeadId || '123',
         });
       }
@@ -99,7 +104,7 @@ export default function QuickAddSheet() {
           <div className="p-4 bg-white dark:bg-zinc-900 rounded-t-[10px] flex-1 overflow-y-auto hide-scrollbar">
             <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 dark:bg-zinc-700 mb-6" />
             <div className="flex justify-between items-center mb-4">
-              <Drawer.Title className="font-bold text-xl dark:text-gray-100">Add Lead</Drawer.Title>
+              <Drawer.Title className="font-bold text-xl dark:text-gray-100">Add {isCollaborator ? 'Collaborator' : 'Lead'}</Drawer.Title>
               <Drawer.Close className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition">
                 <X className="w-5 h-5" />
               </Drawer.Close>
