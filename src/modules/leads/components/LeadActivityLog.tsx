@@ -27,6 +27,17 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
   
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
 
+  const setQuickDate = (daysToAdd: number, nextMonday: boolean = false) => {
+    const d = new Date();
+    if (nextMonday) {
+      d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7));
+    } else {
+      d.setDate(d.getDate() + daysToAdd);
+    }
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    setNextActionDateVal(iso);
+  };
+
   const handleCompleteAction = async (logId: string | number) => {
     await completeAction.mutateAsync(logId);
     setIsFollowUpModalOpen(true);
@@ -128,27 +139,54 @@ export default function LeadActivityLog({ leadId }: { leadId: string }) {
               className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
             />
           </div>
-          <div className="w-full sm:w-[22rem] flex gap-2">
-            <input
-              type="date"
-              value={nextActionDateVal}
-              onChange={e => setNextActionDateVal(e.target.value)}
-              className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-            />
-            <input
-              type="time"
-              value={nextActionTimeVal}
-              onChange={e => setNextActionTimeVal(e.target.value)}
-              className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-            />
+          <div className="w-full sm:w-[22rem] flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={nextActionDateVal}
+                onChange={e => setNextActionDateVal(e.target.value)}
+                className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+              />
+              <input
+                type="time"
+                value={nextActionTimeVal}
+                onChange={e => setNextActionTimeVal(e.target.value)}
+                className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                type="button" 
+                onClick={() => setQuickDate(1)}
+                className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition"
+              >
+                Tomorrow
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setQuickDate(0, true)}
+                className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition"
+              >
+                Next Monday
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setQuickDate(7)}
+                className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition"
+              >
+                7 Days
+              </button>
+            </div>
           </div>
-          <button
-            type="submit"
-            disabled={!comment.trim() && !nextAction.trim() && !nextActionDateVal.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition whitespace-nowrap"
-          >
-            Add Log
-          </button>
+          <div className="flex flex-col justify-start">
+            <button
+              type="submit"
+              disabled={!comment.trim() && !nextAction.trim() && !nextActionDateVal.trim()}
+              className="px-4 py-2 h-[38px] bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition whitespace-nowrap"
+            >
+              Add Log
+            </button>
+          </div>
         </div>
       </form>
 
