@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, ClipboardList } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
 import ScheduleFollowUpModal from '../components/ScheduleFollowUpModal';
-import LeadLogsModal from '../components/LeadLogsModal';
+import EditLeadDetailsModal from '../components/EditLeadDetailsModal';
 import type { Lead } from '../types';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
@@ -36,7 +36,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const [activeFilterId, setActiveFilterId] = useState<string>('');
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
-  const [logsLead, setLogsLead] = useState<Lead | null>(null);
+  const [editLead, setEditLead] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('table'); // Default to table for denser view
   
   // New filter states
@@ -272,7 +272,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                             {c.name}
                           </span>
                         ))}
-                        <button onClick={(e) => { e.preventDefault(); setLogsLead(lead); }} className="ml-1 p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded-md transition" title="View Logs"><ClipboardList className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="ml-1 p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded-md transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
                         <button 
                           onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
                           className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
@@ -378,7 +378,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                               <LinkedinIcon className="w-4 h-4" />
                             </button>
                           )}
-                          <button onClick={(e) => { e.preventDefault(); setLogsLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="View Logs"><ClipboardList className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
                           <button 
                             onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
@@ -409,12 +409,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       </div>
 
       <QuickUpdateModal lead={quickUpdateLead} onClose={() => setQuickUpdateLead(null)} />
-      <LeadLogsModal
-        isOpen={!!logsLead}
-        onClose={() => setLogsLead(null)}
-        leadId={logsLead?.id?.toString() || ''}
-        leadName={logsLead?.fullName}
-      />
+      <EditLeadDetailsModal lead={editLead} onClose={() => setEditLead(null)} />
       <ScheduleFollowUpModal 
         isOpen={!!followUpLeadId} 
         onClose={() => setFollowUpLeadId(null)} 

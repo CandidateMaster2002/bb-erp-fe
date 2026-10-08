@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useCategories, useUpdateLeadCategories, useCreateLeadLog } from '../api/queries';
-import type { Lead } from '../types';
+import { useCategories, useUpdateLeadCategories } from '../api/queries';
+import type { Lead, CategoryGroup } from '../types';
 import { X, Check } from 'lucide-react';
+import LeadActivityLog from './LeadActivityLog';
 
 interface QuickUpdateModalProps {
   lead: Lead | null;
@@ -11,99 +12,63 @@ interface QuickUpdateModalProps {
 export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProps) {
   const { data: categoryGroups } = useCategories();
   const updateCategoriesMutation = useUpdateLeadCategories();
-  const createLogMutation = useCreateLeadLog();
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
-  const [comment, setComment] = useState('');
-  const [nextAction, setNextAction] = useState('');
-  const [nextActionDateVal, setNextActionDateVal] = useState('');
-  const [nextActionTimeVal, setNextActionTimeVal] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (lead) {
       setSelectedCategoryIds(lead.categories?.map(c => Number(c.id)) || []);
-      setComment('');
-      setNextAction('');
-      setNextActionDateVal('');
-      setNextActionTimeVal('');
       setToastMessage(null);
     }
   }, [lead]);
 
   if (!lead) return null;
 
-  const toggleCategory = (group: any, id: number) => {
+  const toggleCategory = (group: CategoryGroup, categoryId: number) => {
     setSelectedCategoryIds(prev => {
-      // Find all IDs that belong to the same group
-      const groupValueIds = group.values?.map((v: any) => Number(v.id)) || [];
-      // Remove any currently selected IDs that belong to this group
-      const nextIds = prev.filter(cId => !groupValueIds.includes(cId));
-      
-      // If the clicked ID was already selected, it will be toggled off (like a radio uncheck/toggle).
-      // If you strictly want radio behavior (cannot unselect), just do: return [...nextIds, id];
-      // But toggling off is usually better for tags. Let's allow toggle off:
-      if (prev.includes(id)) {
-        return nextIds;
+      const groupCategoryIds = group.values?.map(v => Number(v.id)) || [];
+      let newSelection = prev.filter(id => !groupCategoryIds.includes(id));
+      if (!prev.includes(categoryId)) {
+        newSelection.push(categoryId);
       }
-      return [...nextIds, id];
+      return newSelection;
     });
   };
 
-  const handleSave = async () => {
+  const handleSaveCategories = async () => {
     try {
-      const promises: Promise<any>[] = [];
-
-      // Only call update if it actually changed, or just call it always to be safe.
-      promises.push(updateCategoriesMutation.mutateAsync({ 
-        id: lead.id, 
-        categoryIds: selectedCategoryIds 
-      }));
-
-      if (comment.trim() || nextAction.trim()) {
-        const finalIso = nextActionDateVal 
-          ? (nextActionTimeVal ? new Date(`${nextActionDateVal}T${nextActionTimeVal}`).toISOString() : new Date(nextActionDateVal).toISOString())
-          : undefined;
-
-        promises.push(createLogMutation.mutateAsync({
-          leadId: lead.id,
-          log: {
-            comment: comment.trim(),
-            nextAction: nextAction.trim(),
-            nextActionDate: finalIso
-          }
-        }));
-      }
-
-      await Promise.all(promises);
-      
-      setToastMessage('Update successful!');
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-
+      await updateCategoriesMutation.mutateAsync({
+        id: lead.id,
+        categoryIds: selectedCategoryIds
+      });
+      setToastMessage('Categories saved!');
+      setTimeout(() => setToastMessage(null), 2000);
     } catch (error) {
       console.error(error);
-      alert('Failed to update lead');
+      alert('Failed to update categories');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-zinc-800">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-zinc-800 shrink-0 bg-gray-50 dark:bg-zinc-800/50">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Update: <span className="text-blue-600 dark:text-blue-400">{lead.fullName}</span></h2>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition">
+          <button onClick={onClose} className="p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded-full transition">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto flex-1 space-y-6">
+        <div className="overflow-y-auto flex-1 p-0 flex flex-col md:flex-row">
           
-          {/* Section A: Update Categories */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-800 dark:text-gray-200">Update Categories</h3>
-            <div className="space-y-4">
+          {/* Left Column: Categories */}
+          <div className="p-4 md:w-1/3 border-b md:border-b-0 md:border-r border-gray-200 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-900/30">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium text-gray-800 dark:text-gray-200">Categories</h3>
+            </div>
+            
+            <div className="space-y-4 mb-4">
               {Array.isArray(categoryGroups) && categoryGroups.map(group => (
                 <div key={group.id} className="space-y-2">
                   <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group.name}</div>
@@ -114,7 +79,7 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
                         <button
                           key={val.id}
                           onClick={() => toggleCategory(group, Number(val.id))}
-                          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                          className={`px-2 py-1 text-xs font-medium rounded-full border transition-colors ${
                             isSelected 
                               ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800' 
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:bg-zinc-700'
@@ -128,74 +93,22 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Section B: Add Activity Log */}
-          <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-zinc-800">
-            <h3 className="font-medium text-gray-800 dark:text-gray-200">Add Activity Log</h3>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
-                <textarea
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  placeholder="E.g., Spoke on call, discussed pricing..."
-                  rows={2}
-                  className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Next Action (Optional)</label>
-                  <input
-                    type="text"
-                    value={nextAction}
-                    onChange={e => setNextAction(e.target.value)}
-                    placeholder="E.g., Send proposal"
-                    className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Next Action Date (Optional)</label>
-                  <div className="flex gap-2 w-full">
-                    <input
-                      type="date"
-                      value={nextActionDateVal}
-                      onChange={e => setNextActionDateVal(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-                    />
-                    <input
-                      type="time"
-                      value={nextActionTimeVal}
-                      onChange={e => setNextActionTimeVal(e.target.value)}
-                      className="w-full bg-white dark:bg-zinc-950 border border-gray-300 dark:border-zinc-700 rounded-md px-3 py-2 text-sm dark:text-gray-100 focus:ring-1 focus:ring-blue-500 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <div className="p-4 border-t border-gray-200 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-zinc-900/50">
-          <div className="text-sm font-medium text-green-600 dark:text-green-400">
-            {toastMessage && <span className="flex items-center gap-1"><Check className="w-4 h-4" /> {toastMessage}</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800 rounded-md transition">
-              Cancel
-            </button>
             <button 
-              onClick={handleSave}
-              disabled={updateCategoriesMutation.isPending || createLogMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
+              onClick={handleSaveCategories}
+              disabled={updateCategoriesMutation.isPending}
+              className="w-full px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition flex items-center justify-center gap-2"
             >
-              {(updateCategoriesMutation.isPending || createLogMutation.isPending) ? 'Saving...' : 'Save & Close'}
+              {toastMessage ? <><Check className="w-4 h-4"/> Saved</> : 'Save Categories'}
             </button>
           </div>
+
+          {/* Right Column: Activity Logs */}
+          <div className="p-4 md:w-2/3 flex-1 bg-white dark:bg-zinc-900">
+             <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-3">Activity & Logs</h3>
+             <LeadActivityLog leadId={lead.id.toString()} />
+          </div>
+
         </div>
       </div>
     </div>
