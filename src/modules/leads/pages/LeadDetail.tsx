@@ -34,19 +34,25 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
 
   const handleGroupCategoryChange = (group: CategoryGroup, newValueId: string) => {
     const groupValueIds = group.values?.map(v => Number(v.id)) || [];
+    const isMulti = group.name.toLowerCase().includes('campaign');
+    const valId = Number(newValueId);
     
-    // Remove all existing categories that belong to this group from the current local array
-    const nextIds = selectedCategoryIds.filter(id => !groupValueIds.includes(id));
+    let nextIds = [...selectedCategoryIds];
     
-    // If a new value was selected, add it to the array
-    if (newValueId) {
-      nextIds.push(Number(newValueId));
+    if (isMulti) {
+      if (nextIds.includes(valId)) {
+        nextIds = nextIds.filter(id => id !== valId);
+      } else {
+        if (valId) nextIds.push(valId);
+      }
+    } else {
+      nextIds = selectedCategoryIds.filter(id => !groupValueIds.includes(id));
+      if (valId) {
+        nextIds.push(valId);
+      }
     }
     
-    // 1. Update local state immediately so UI feels snappy
     setSelectedCategoryIds(nextIds);
-    
-    // 2. Gather all active selected IDs and send flat array to backend
     updateCategoriesMutation.mutate({ id: lead.id, categoryIds: nextIds });
   };
 
@@ -91,8 +97,29 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
           <div className="flex flex-wrap gap-2 items-center">
             {Array.isArray(categoryGroups) && categoryGroups.map(group => {
               const groupValueIds = group.values?.map(v => Number(v.id)) || [];
-              const selectedValueId = selectedCategoryIds.find(id => groupValueIds.includes(id)) || '';
+              const isMulti = group.name.toLowerCase().includes('campaign');
 
+              if (isMulti) {
+                return (
+                  <div key={group.id} className="flex flex-wrap items-center gap-1 border border-purple-200 dark:border-purple-800 rounded-md px-2 py-1 bg-purple-50/50 dark:bg-purple-900/10">
+                    <span className="text-xs text-purple-700 dark:text-purple-400 font-medium mr-1">{group.name}:</span>
+                    {group.values?.map(val => {
+                      const isSelected = selectedCategoryIds.includes(Number(val.id));
+                      return (
+                        <button
+                          key={val.id}
+                          onClick={() => handleGroupCategoryChange(group, val.id.toString())}
+                          className={`px-2 py-0.5 text-xs font-medium rounded-md transition-colors ${isSelected ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:hover:bg-purple-800/50'}`}
+                        >
+                          {val.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              const selectedValueId = selectedCategoryIds.find(id => groupValueIds.includes(id)) || '';
               return (
                 <div key={group.id} className="flex items-center">
                   <select

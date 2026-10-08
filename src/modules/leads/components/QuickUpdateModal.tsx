@@ -27,12 +27,23 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
 
   const toggleCategory = (group: CategoryGroup, categoryId: number) => {
     setSelectedCategoryIds(prev => {
-      const groupCategoryIds = group.values?.map(v => Number(v.id)) || [];
-      let newSelection = prev.filter(id => !groupCategoryIds.includes(id));
-      if (!prev.includes(categoryId)) {
-        newSelection.push(categoryId);
+      const isMulti = group.name.toLowerCase().includes('campaign');
+      
+      if (isMulti) {
+        if (prev.includes(categoryId)) {
+          return prev.filter(id => id !== categoryId);
+        } else {
+          return [...prev, categoryId];
+        }
+      } else {
+        if (prev.includes(categoryId)) {
+          return prev.filter(id => id !== categoryId);
+        } else {
+          const groupCategoryIds = group.values?.map(v => Number(v.id)) || [];
+          const filtered = prev.filter(id => !groupCategoryIds.includes(id));
+          return [...filtered, categoryId];
+        }
       }
-      return newSelection;
     });
   };
 
