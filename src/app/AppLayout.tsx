@@ -9,6 +9,7 @@ const MODULES_NAV = [
   { name: 'Actions', path: '/', icon: CalendarCheck },
   { name: 'Leads', path: '/leads', icon: Users },
   { name: 'Collaborators', path: '/collaborators', icon: Briefcase },
+  { name: 'Staffing / ATS', path: '/staffing', icon: Briefcase },
   { name: 'Links', path: '/links', icon: Link2 },
   // { name: 'Pipeline', path: '/pipeline', icon: Columns },
   // { name: 'Reports', path: '/reports', icon: FileBarChart },

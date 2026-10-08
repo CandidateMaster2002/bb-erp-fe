@@ -10,6 +10,13 @@ import CategorySettings from '../modules/settings/pages/CategorySettings';
 import ActionsAgenda from '../modules/actions/pages/ActionsAgenda';
 import GlobalLinks from '../modules/links/pages/GlobalLinks';
 
+import StaffingLayout from '../modules/staffing/pages/StaffingLayout';
+import ClientsList from '../modules/staffing/pages/ClientsList';
+import VendorsList from '../modules/staffing/pages/VendorsList';
+import RequirementsList from '../modules/staffing/pages/RequirementsList';
+import RequirementDetail from '../modules/staffing/pages/RequirementDetail';
+import { Navigate } from 'react-router-dom';
+
 // Placeholders for other routes
 const Placeholder = ({ title }: { title: string }) => (
   <div className="p-4"><h1 className="text-2xl font-bold">{title}</h1></div>
@@ -51,6 +58,17 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         element: <CategorySettings />,
+      },
+      {
+        path: 'staffing',
+        element: <StaffingLayout />,
+        children: [
+          { index: true, element: <Navigate to="requirements" replace /> },
+          { path: 'requirements', element: <RequirementsList /> },
+          { path: 'requirements/:id', element: <RequirementDetail /> },
+          { path: 'clients', element: <ClientsList /> },
+          { path: 'vendors', element: <VendorsList /> },
+        ]
       },
       {
         path: 'more',
