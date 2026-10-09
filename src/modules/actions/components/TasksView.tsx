@@ -83,7 +83,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   return (
     <div className={`space-y-6 ${hideFilters ? "" : "flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4 pt-1"}`}>
       {/* Header and Controls */}
-      {!hideFilters && (<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {!hideFilters && (<div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900 py-2 -mt-2 -mx-4 px-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 dark:border-zinc-800">
         <div className="flex flex-wrap items-center gap-2 bg-gray-100/80 dark:bg-zinc-800/80 p-1 rounded-xl">
           {(['all', 'today', 'tomorrow', 'week', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
             <button
