@@ -51,14 +51,14 @@ export const useLeadsList = (filters: any) => {
   });
 };
 
-export const useLeadDetail = (id: string) => {
+export const useLeadDetail = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: leadsKeys.detail(id),
     queryFn: async () => {
       const { data } = await api.get(`/leads/${id}`);
       return data as Lead;
     },
-    enabled: !!id,
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
   });
 };
 

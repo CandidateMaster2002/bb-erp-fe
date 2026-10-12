@@ -56,6 +56,8 @@ export interface LeadLog {
   id: string | number;
   leadId: string | number;
   leadName?: string;
+  mobileNumber?: string;
+  linkedinUrl?: string;
   comment?: string;
   nextAction?: string;
   nextActionDate?: string;

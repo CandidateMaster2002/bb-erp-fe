@@ -5,13 +5,178 @@ import {
   useActionsByRange, 
   useCompleteLogAction, 
   useCancelLogAction,
-  useUpdateLeadLog
+  useUpdateLeadLog,
+  useLeadDetail
 } from '../../leads/api/queries';
-import { CheckCircle2, XCircle, User, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, User, Clock, Phone } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
 import TasksView from '../components/TasksView';
 import ScheduleFollowUpModal from '../../leads/components/ScheduleFollowUpModal';
+import type { LeadLog } from '../../leads/types';
+
+const LinkedinIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <rect width="4" height="12" x="2" y="9" />
+    <circle cx="4" cy="4" r="2" />
+  </svg>
+);
+
+function LeadActionCard({
+  action,
+  now,
+  handleCompleteLeadAction,
+  cancelAction,
+  postponeActionId,
+  setPostponeActionId,
+  postponeDateVal,
+  setPostponeDateVal,
+  postponeTimeVal,
+  setPostponeTimeVal,
+  handleSavePostpone
+}: {
+  action: LeadLog;
+  now: Date;
+  handleCompleteLeadAction: (action: any) => void;
+  cancelAction: any;
+  postponeActionId: string | number | null;
+  setPostponeActionId: (id: string | number | null) => void;
+  postponeDateVal: string;
+  setPostponeDateVal: (val: string) => void;
+  postponeTimeVal: string;
+  setPostponeTimeVal: (val: string) => void;
+  handleSavePostpone: (id: string | number) => void;
+}) {
+  const needsLeadFallback = !action.mobileNumber && !action.linkedinUrl;
+  const { data: leadData } = useLeadDetail(action.leadId?.toString(), {
+    enabled: needsLeadFallback && !!action.leadId
+  });
+
+  const actionLinkedin = action.linkedinUrl || leadData?.linkedinUrl;
+  const actionPhone = action.mobileNumber || leadData?.mobileNumber;
+
+  const actionDate = action.nextActionDate ? new Date(action.nextActionDate) : null;
+  const isOverdue = actionDate && isBefore(actionDate, now);
+
+  return (
+    <div key={action.id} className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <Link to={`/leads/${action.leadId}`} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <User className="w-4 h-4" />
+              {action.leadName || `Lead #${action.leadId}`}
+            </Link>
+
+            {actionLinkedin && (
+              <button 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(actionLinkedin, '_blank'); }}
+                className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                title="LinkedIn Profile"
+              >
+                <LinkedinIcon className="w-4 h-4" />
+              </button>
+            )}
+
+            {actionPhone && (
+              <a
+                href={`tel:${actionPhone}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 dark:bg-zinc-700/60 px-2 py-0.5 rounded border border-gray-200 dark:border-zinc-700 transition"
+                title="Call Mobile"
+              >
+                <Phone className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                <span>{actionPhone}</span>
+              </a>
+            )}
+
+            {actionDate && (
+              <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${isOverdue ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:border-zinc-600'}`}>
+                {format(actionDate, 'MMM d, yyyy')} {isOverdue && '(Overdue)'}
+              </span>
+            )}
+          </div>
+          
+          <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mt-2">
+            {action.nextAction}
+          </h3>
+          
+          {action.comment && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+              <span className="font-medium text-gray-400">Context: </span>
+              {action.comment}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 sm:items-center mt-3 sm:mt-0">
+          <button 
+            onClick={() => handleCompleteLeadAction(action)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
+          >
+            <CheckCircle2 className="w-4 h-4" /> Complete
+          </button>
+          <button 
+            onClick={() => cancelAction.mutateAsync(action.id)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
+          >
+            <XCircle className="w-4 h-4" /> Cancel
+          </button>
+          <button 
+            onClick={() => {
+              setPostponeActionId(action.id);
+              const d = action.nextActionDate ? new Date(action.nextActionDate) : new Date();
+              if (!isNaN(d.getTime())) {
+                const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                setPostponeDateVal(localIso.slice(0, 10));
+                const timePart = localIso.slice(11, 16);
+                setPostponeTimeVal(action.nextActionDate && timePart !== '00:00' ? timePart : '');
+              }
+            }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
+          >
+            <Clock className="w-4 h-4" /> Postpone
+          </button>
+        </div>
+      </div>
+
+      {postponeActionId === action.id && (
+        <div className="pt-3 border-t border-gray-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-3 items-center">
+          <div className="flex-1 flex gap-2 w-full">
+            <input
+              type="date"
+              value={postponeDateVal}
+              onChange={(e) => setPostponeDateVal(e.target.value)}
+              className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+            />
+            <input
+              type="time"
+              value={postponeTimeVal}
+              onChange={(e) => setPostponeTimeVal(e.target.value)}
+              className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button 
+              onClick={() => setPostponeActionId(null)}
+              className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-md transition border border-transparent hover:border-gray-200 dark:hover:border-zinc-600"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={() => handleSavePostpone(action.id)}
+              disabled={!postponeDateVal}
+              className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md transition shadow-sm"
+            >
+              Save Date
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type ViewMode = 'today' | 'tomorrow' | 'week' | 'custom';
 
@@ -181,105 +346,22 @@ export default function ActionsAgenda() {
             <p className="text-sm mt-1">No pending actions found for this period.</p>
           </div>
         ) : (
-          actions.map(action => {
-            const actionDate = action.nextActionDate ? new Date(action.nextActionDate) : null;
-            const isOverdue = actionDate && isBefore(actionDate, now);
-
-            return (
-              <div key={action.id} className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Link to={`/leads/${action.leadId}`} className="flex items-center gap-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                      <User className="w-4 h-4" />
-                      {action.leadName || `Lead #${action.leadId}`}
-                    </Link>
-                    {actionDate && (
-                      <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${isOverdue ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:border-zinc-600'}`}>
-                        {format(actionDate, 'MMM d, yyyy')} {isOverdue && '(Overdue)'}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mt-2">
-                    {action.nextAction}
-                  </h3>
-                  
-                  {action.comment && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                      <span className="font-medium text-gray-400">Context: </span>
-                      {action.comment}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 sm:items-center mt-3 sm:mt-0">
-                  <button 
-                    onClick={() => handleCompleteLeadAction(action)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Complete
-                  </button>
-                  <button 
-                    onClick={() => cancelAction.mutateAsync(action.id)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
-                  >
-                    <XCircle className="w-4 h-4" /> Cancel
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setPostponeActionId(action.id);
-                      const d = action.nextActionDate ? new Date(action.nextActionDate) : new Date();
-                      if (!isNaN(d.getTime())) {
-                        const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
-                        setPostponeDateVal(localIso.slice(0, 10));
-                        const timePart = localIso.slice(11, 16);
-                        setPostponeTimeVal(action.nextActionDate && timePart !== '00:00' ? timePart : '');
-                      }
-                    }}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
-                  >
-                    <Clock className="w-4 h-4" /> Postpone
-                  </button>
-                </div>
-                </div>
-
-                {postponeActionId === action.id && (
-                  <div className="pt-3 border-t border-gray-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-3 items-center">
-                    <div className="flex-1 flex gap-2 w-full">
-                      <input
-                        type="date"
-                        value={postponeDateVal}
-                        onChange={(e) => setPostponeDateVal(e.target.value)}
-                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-                      />
-                      <input
-                        type="time"
-                        value={postponeTimeVal}
-                        onChange={(e) => setPostponeTimeVal(e.target.value)}
-                        className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <button 
-                        onClick={() => setPostponeActionId(null)}
-                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-md transition border border-transparent hover:border-gray-200 dark:hover:border-zinc-600"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={() => handleSavePostpone(action.id)}
-                        disabled={!postponeDateVal}
-                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md transition shadow-sm"
-                      >
-                        Save Date
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
+          actions.map(action => (
+            <LeadActionCard
+              key={action.id}
+              action={action}
+              now={now}
+              handleCompleteLeadAction={handleCompleteLeadAction}
+              cancelAction={cancelAction}
+              postponeActionId={postponeActionId}
+              setPostponeActionId={setPostponeActionId}
+              postponeDateVal={postponeDateVal}
+              setPostponeDateVal={setPostponeDateVal}
+              postponeTimeVal={postponeTimeVal}
+              setPostponeTimeVal={setPostponeTimeVal}
+              handleSavePostpone={handleSavePostpone}
+            />
+          ))
         )}
         
         {activeTab === 'all' && (
