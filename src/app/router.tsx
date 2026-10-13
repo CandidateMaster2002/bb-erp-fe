@@ -8,6 +8,7 @@ import PipelineBoard from '../modules/leads/pages/Pipeline';
 import ReportsDashboard from '../modules/leads/pages/Reports';
 import CategorySettings from '../modules/settings/pages/CategorySettings';
 import ActionsAgenda from '../modules/actions/pages/ActionsAgenda';
+import ActionDetail from '../modules/actions/pages/ActionDetail';
 import GlobalLinks from '../modules/links/pages/GlobalLinks';
 
 import StaffingLayout from '../modules/staffing/pages/StaffingLayout';
@@ -34,6 +35,14 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <ActionsAgenda />, // 'Actions' view is now default
+      },
+      {
+        path: 'actions/:id',
+        element: <ActionDetail />,
+      },
+      {
+        path: 'tasks/:id',
+        element: <ActionDetail />,
       },
       {
         path: 'leads',

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { 
-  CheckCircle2, XCircle, Clock, Plus
+  CheckCircle2, XCircle, Clock, Plus, ChevronRight, ListTodo
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { 
   useTasksToday, 
   useTasksByDate, 
@@ -163,7 +164,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
               <div key={task.id} className="bg-white dark:bg-zinc-800 p-3 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 flex flex-col gap-4 transition hover:border-blue-300 dark:hover:border-blue-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${
                         task.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' :
                         task.status === 'CANCELLED' ? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-zinc-700 dark:text-gray-400 dark:border-zinc-600' :
@@ -177,50 +178,69 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                           {format(deadlineDate, 'MMM d, yyyy h:mm a')} {isOverdue && '(Overdue)'}
                         </span>
                       )}
+                      {task.subactions && task.subactions.length > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium">
+                          <ListTodo className="w-3 h-3" />
+                          {task.subactions.filter(s => s.status === 'COMPLETED').length}/{task.subactions.length} subactions
+                        </span>
+                      )}
                     </div>
                     
-                    <h3 className={`text-base font-medium mt-2 ${task.status !== 'PENDING' ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
-                      {task.title}
-                    </h3>
-                    
-                    {task.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {task.description}
-                      </p>
-                    )}
+                    <Link to={`/actions/${task.id}`} className="block group">
+                      <h3 className={`text-base font-medium mt-2 transition group-hover:text-blue-600 dark:group-hover:text-blue-400 ${task.status !== 'PENDING' ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                        {task.title}
+                      </h3>
+                      
+                      {task.description && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                          {task.description}
+                        </p>
+                      )}
+                    </Link>
                   </div>
 
-                  {task.status === 'PENDING' && (
-                    <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 mt-3 sm:mt-0">
-                      <button 
-                        onClick={() => completeMutation.mutateAsync(task.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
-                      >
-                        <CheckCircle2 className="w-4 h-4" /> Complete
-                      </button>
-                      <button 
-                        onClick={() => cancelMutation.mutateAsync(task.id)}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
-                      >
-                        <XCircle className="w-4 h-4" /> Cancel
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setPostponeTaskId(task.id);
-                          const d = task.deadline ? new Date(task.deadline) : new Date();
-                          if (!isNaN(d.getTime())) {
-                            const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
-                            setPostponeDateVal(localIso.slice(0, 10));
-                            const timePart = localIso.slice(11, 16);
-                            setPostponeTimeVal(task.deadline && timePart !== '00:00' ? timePart : '');
-                          }
-                        }}
-                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
-                      >
-                        <Clock className="w-4 h-4" /> Postpone
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 sm:items-center mt-3 sm:mt-0">
+                    {task.status === 'PENDING' && (
+                      <>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); completeMutation.mutateAsync(task.id); }}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-400 rounded-lg text-sm font-medium transition border border-green-200 dark:border-green-800/30"
+                        >
+                          <CheckCircle2 className="w-4 h-4" /> Complete
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); cancelMutation.mutateAsync(task.id); }}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700"
+                        >
+                          <XCircle className="w-4 h-4" /> Cancel
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPostponeTaskId(task.id);
+                            const d = task.deadline ? new Date(task.deadline) : new Date();
+                            if (!isNaN(d.getTime())) {
+                              const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                              setPostponeDateVal(localIso.slice(0, 10));
+                              const timePart = localIso.slice(11, 16);
+                              setPostponeTimeVal(task.deadline && timePart !== '00:00' ? timePart : '');
+                            }
+                          }}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
+                        >
+                          <Clock className="w-4 h-4" /> Postpone
+                        </button>
+                      </>
+                    )}
+
+                    <Link
+                      to={`/actions/${task.id}`}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-lg transition"
+                      title="View Details & Subactions"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
 
                 {postponeTaskId === task.id && (
