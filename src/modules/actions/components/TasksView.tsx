@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { 
-  CheckCircle2, XCircle, Clock, Plus, ChevronRight, ListTodo
+  CheckCircle2, 
+  XCircle, 
+  Clock, 
+  Plus, 
+  ChevronRight, 
+  ListTodo, 
+  Calendar,
+  Sparkles,
+  Inbox
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -9,21 +17,38 @@ import {
   useTasksByDate, 
   useTasksByRange, 
   useTasksByStatus, 
+  useTasksByHorizon,
+  useShiftTaskHorizon,
   useCompleteTask, 
   useCancelTask, 
-  useUpdateTask,
 } from '../api/tasks';
-import type { Task } from '../api/tasks';
+import type { Task, TimeHorizon } from '../api/tasks';
 import NewTaskModal from './NewTaskModal';
 
-type TaskFilter = 'all' | 'today' | 'tomorrow' | 'week' | 'completed' | 'cancelled' | 'custom-date' | 'custom-range';
+type TaskFilter = 
+  | 'TODAY' 
+  | 'THIS_WEEK' 
+  | 'THIS_MONTH' 
+  | 'SOMEDAY' 
+  | 'all' 
+  | 'completed' 
+  | 'cancelled' 
+  | 'custom-date' 
+  | 'custom-range';
+
+const HORIZON_TABS: { key: TimeHorizon; label: string; icon: typeof Clock }[] = [
+  { key: 'TODAY', label: 'Today', icon: Sparkles },
+  { key: 'THIS_WEEK', label: 'This Week', icon: Clock },
+  { key: 'THIS_MONTH', label: 'This Month', icon: Calendar },
+  { key: 'SOMEDAY', label: 'Backlog / Someday', icon: Inbox },
+];
 
 export default function TasksView({ hideFilters, filterOverride }: { hideFilters?: boolean; filterOverride?: any }) {
-  const [filter, setFilter] = useState<TaskFilter>('all');
+  const [filter, setFilter] = useState<TaskFilter>('TODAY');
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-  const [postponeTaskId, setPostponeTaskId] = useState<number | null>(null);
-  const [postponeDateVal, setPostponeDateVal] = useState<string>('');
-  const [postponeTimeVal, setPostponeTimeVal] = useState<string>('');
+  const [assignDateTaskId, setAssignDateTaskId] = useState<number | null>(null);
+  const [assignDateVal, setAssignDateVal] = useState<string>('');
+  const [assignTimeVal, setAssignTimeVal] = useState<string>('');
 
   const [customDate, setCustomDate] = useState<string>('');
   const [customRange, setCustomRange] = useState<{from: string; to: string}>({ from: '', to: '' });
@@ -34,10 +59,11 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const customRangeFrom = typeof activeFilter === 'object' && activeFilter.type === 'custom-range' ? activeFilter.from : filter === 'custom-range' ? customRange.from : '';
   const customRangeTo = typeof activeFilter === 'object' && activeFilter.type === 'custom-range' ? activeFilter.to : filter === 'custom-range' ? customRange.to : '';
 
+  // Queries
   const allQuery = useTasksByStatus('PENDING');
-  const todayQuery = useTasksToday();
+  const todayLegacyQuery = useTasksToday();
   const tomorrowQuery = useTasksByDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
-  const weekQuery = useTasksByRange(
+  const weekLegacyQuery = useTasksByRange(
     format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), 
     format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd')
   );
@@ -46,19 +72,30 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const completedQuery = useTasksByStatus('COMPLETED');
   const cancelledQuery = useTasksByStatus('CANCELLED');
 
+  // Horizon Queries
+  const todayHorizonQuery = useTasksByHorizon('TODAY');
+  const thisWeekHorizonQuery = useTasksByHorizon('THIS_WEEK');
+  const thisMonthHorizonQuery = useTasksByHorizon('THIS_MONTH');
+  const somedayHorizonQuery = useTasksByHorizon('SOMEDAY');
+
   const completeMutation = useCompleteTask();
   const cancelMutation = useCancelTask();
-  const updateMutation = useUpdateTask();
+  const shiftHorizonMutation = useShiftTaskHorizon();
 
-  let currentQuery = allQuery;
-  if (activeFilter === 'today') currentQuery = todayQuery;
-  if (activeFilter === 'tomorrow') currentQuery = tomorrowQuery;
-  if (activeFilter === 'week') currentQuery = weekQuery;
-  if (activeFilter === 'completed') currentQuery = completedQuery;
-  if (activeFilter === 'cancelled') currentQuery = cancelledQuery;
-  if (activeFilter === 'custom-date') currentQuery = customDateQuery;
-  if (activeFilter === 'custom-range') currentQuery = customRangeQuery;
-  if (typeof activeFilter === 'object') {
+  let currentQuery = todayHorizonQuery;
+  if (activeFilter === 'TODAY') currentQuery = todayHorizonQuery;
+  else if (activeFilter === 'THIS_WEEK') currentQuery = thisWeekHorizonQuery;
+  else if (activeFilter === 'THIS_MONTH') currentQuery = thisMonthHorizonQuery;
+  else if (activeFilter === 'SOMEDAY') currentQuery = somedayHorizonQuery;
+  else if (activeFilter === 'all') currentQuery = allQuery;
+  else if (activeFilter === 'today') currentQuery = todayLegacyQuery;
+  else if (activeFilter === 'tomorrow') currentQuery = tomorrowQuery;
+  else if (activeFilter === 'week') currentQuery = weekLegacyQuery;
+  else if (activeFilter === 'completed') currentQuery = completedQuery;
+  else if (activeFilter === 'cancelled') currentQuery = cancelledQuery;
+  else if (activeFilter === 'custom-date') currentQuery = customDateQuery;
+  else if (activeFilter === 'custom-range') currentQuery = customRangeQuery;
+  else if (typeof activeFilter === 'object') {
     if (activeFilter.type === 'custom-date') currentQuery = customDateQuery;
     if (activeFilter.type === 'custom-range') currentQuery = customRangeQuery;
   }
@@ -66,94 +103,159 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
   const { data: tasks, isLoading } = currentQuery;
   const now = startOfDay(new Date());
 
-  const handlePostpone = async (id: number) => {
-    if (!postponeDateVal) return;
-    const finalIso = postponeTimeVal 
-      ? new Date(`${postponeDateVal}T${postponeTimeVal}`).toISOString() 
-      : new Date(postponeDateVal).toISOString();
+  const handleSaveAssignDate = async (id: number) => {
+    if (!assignDateVal) return;
+    const finalIso = assignTimeVal 
+      ? new Date(`${assignDateVal}T${assignTimeVal}`).toISOString() 
+      : new Date(assignDateVal).toISOString();
 
-    await updateMutation.mutateAsync({
+    await shiftHorizonMutation.mutateAsync({
       id,
-      data: { deadline: finalIso }
+      horizon: 'TODAY',
+      deadline: finalIso
     });
-    setPostponeTaskId(null);
-    setPostponeDateVal('');
-    setPostponeTimeVal('');
+    setAssignDateTaskId(null);
+    setAssignDateVal('');
+    setAssignTimeVal('');
+  };
+
+  const getHorizonBadge = (horizon?: string) => {
+    if (!horizon) return null;
+    switch (horizon.toUpperCase()) {
+      case 'TODAY':
+        return <span className="text-[11px] px-2 py-0.5 rounded-md font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">Today</span>;
+      case 'THIS_WEEK':
+        return <span className="text-[11px] px-2 py-0.5 rounded-md font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">This Week</span>;
+      case 'THIS_MONTH':
+        return <span className="text-[11px] px-2 py-0.5 rounded-md font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">This Month</span>;
+      case 'SOMEDAY':
+        return <span className="text-[11px] px-2 py-0.5 rounded-md font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Someday</span>;
+      default:
+        return null;
+    }
   };
 
   return (
     <div className={`space-y-6 ${hideFilters ? "" : "flex-1 overflow-y-auto hide-scrollbar -mx-4 px-4 pt-1"}`}>
       {/* Header and Controls */}
-      {!hideFilters && (<div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900 py-2 -mt-2 -mx-4 px-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-200 dark:border-zinc-800">
-        <div className="flex flex-wrap items-center gap-2 bg-gray-100/80 dark:bg-zinc-800/80 p-1 rounded-xl">
-          {(['all', 'today', 'tomorrow', 'week', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg capitalize transition ${
-                filter === f 
-                  ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm' 
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-zinc-700/50'
-              }`}
+      {!hideFilters && (
+        <div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900 py-2 -mt-2 -mx-4 px-4 space-y-2 border-b border-gray-200 dark:border-zinc-800">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+            {/* Primary Time Horizon Segmented Control */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-gray-200/70 dark:bg-zinc-800/80 p-1 rounded-xl">
+              {HORIZON_TABS.map(tab => {
+                const Icon = tab.icon;
+                const isSelected = filter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setFilter(tab.key)}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition ${
+                      isSelected 
+                        ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-zinc-700/50'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Action Button */}
+            <button 
+              onClick={() => setIsNewTaskModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap self-end lg:self-auto"
             >
-              {f}
+              <Plus className="w-4 h-4" /> New Task
             </button>
-          ))}
-          <div className="flex items-center gap-1 border-l border-gray-300 dark:border-zinc-700 pl-2 ml-1">
-            <input 
-              type="date"
-              value={filter === 'custom-range' ? customRange.from : filter === 'custom-date' ? customDate : ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (filter === 'custom-range') {
-                  setCustomRange(prev => ({ ...prev, from: val }));
-                } else {
-                  setCustomDate(val);
-                  setFilter('custom-date');
-                }
-              }}
-              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
-                filter === 'custom-date' || (filter === 'custom-range' && customRange.from)
-                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
-                  : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
-              }`}
-              title="Start Date"
-            />
-            <span className="text-gray-400 text-xs px-1">to</span>
-            <input 
-              type="date"
-              value={filter === 'custom-range' ? customRange.to : ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCustomRange(prev => ({ from: filter === 'custom-date' ? customDate : prev.from, to: val }));
-                setFilter('custom-range');
-              }}
-              className={`text-xs bg-transparent border rounded p-1.5 transition-colors ${
-                filter === 'custom-range' && customRange.to
-                  ? 'border-blue-500 ring-1 ring-blue-500 dark:border-blue-400 dark:ring-blue-400 text-blue-700 dark:text-blue-300' 
-                  : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
-              }`}
-              title="End Date (Optional)"
-            />
+          </div>
+
+          {/* Secondary Filters */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-gray-400 font-medium">Other:</span>
+            {(['all', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-2.5 py-1 rounded-md capitalize transition font-medium ${
+                  filter === f
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
+                }`}
+              >
+                {f === 'all' ? 'All Tasks' : f}
+              </button>
+            ))}
+
+            {/* Date Picker Input */}
+            <div className="flex items-center gap-1 pl-2 border-l border-gray-300 dark:border-zinc-700 ml-1">
+              <input 
+                type="date"
+                value={filter === 'custom-range' ? customRange.from : filter === 'custom-date' ? customDate : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (filter === 'custom-range') {
+                    setCustomRange(prev => ({ ...prev, from: val }));
+                  } else {
+                    setCustomDate(val);
+                    setFilter('custom-date');
+                  }
+                }}
+                className={`text-xs bg-transparent border rounded p-1 transition-colors ${
+                  filter === 'custom-date' || (filter === 'custom-range' && customRange.from)
+                    ? 'border-blue-500 ring-1 ring-blue-500 text-blue-700 dark:text-blue-300' 
+                    : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
+                }`}
+                title="Filter by Specific Date"
+              />
+              <span className="text-gray-400 text-xs px-0.5">to</span>
+              <input 
+                type="date"
+                value={filter === 'custom-range' ? customRange.to : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCustomRange(prev => ({ from: filter === 'custom-date' ? customDate : prev.from, to: val }));
+                  setFilter('custom-range');
+                }}
+                className={`text-xs bg-transparent border rounded p-1 transition-colors ${
+                  filter === 'custom-range' && customRange.to
+                    ? 'border-blue-500 ring-1 ring-blue-500 text-blue-700 dark:text-blue-300' 
+                    : 'border-gray-300 dark:border-zinc-600 dark:text-gray-300'
+                }`}
+                title="End Date (Optional)"
+              />
+            </div>
           </div>
         </div>
-        <button 
-          onClick={() => setIsNewTaskModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" /> New Task
-        </button>
-      </div>)}
+      )}
 
       {/* Task List */}
       <div className={`space-y-3 ${hideFilters ? "pb-4" : "pb-24"}`}>
         {isLoading ? (
           <div className="text-center py-12 text-gray-500">Loading tasks...</div>
         ) : !tasks || tasks.length === 0 ? (
-          <div className="text-center py-16 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-gray-500">
-            <CheckCircle2 className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3 opacity-50" />
-            <p className="font-medium text-gray-700 dark:text-gray-300">No tasks found</p>
-            <p className="text-sm mt-1">Enjoy your free time!</p>
+          <div className="text-center py-16 bg-white dark:bg-zinc-800 rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 text-gray-500 space-y-3">
+            <CheckCircle2 className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-2 opacity-50" />
+            <p className="font-medium text-gray-700 dark:text-gray-300">
+              {filter === 'TODAY' ? 'No tasks scheduled for Today' :
+               filter === 'THIS_WEEK' ? 'No tasks in This Week horizon' :
+               filter === 'THIS_MONTH' ? 'No tasks in This Month horizon' :
+               filter === 'SOMEDAY' ? 'Backlog / Someday is empty' :
+               'No tasks found'}
+            </p>
+            <p className="text-xs text-gray-400">
+              {filter === 'SOMEDAY' 
+                ? 'Store long-term goals or ideas that do not have strict deadlines yet.' 
+                : 'Stay organized by moving tasks into flexible horizons or adding new ones.'}
+            </p>
+            <button
+              onClick={() => setIsNewTaskModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg text-xs font-semibold transition"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Task Here
+            </button>
           </div>
         ) : (
           tasks.map((task: Task) => {
@@ -173,11 +275,15 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                       }`}>
                         {task.status}
                       </span>
+
+                      {getHorizonBadge(task.timeHorizon)}
+
                       {deadlineDate && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                           {format(deadlineDate, 'MMM d, yyyy h:mm a')} {isOverdue && '(Overdue)'}
                         </span>
                       )}
+
                       {task.subactions && task.subactions.length > 0 && (
                         <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium">
                           <ListTodo className="w-3 h-3" />
@@ -187,7 +293,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                     </div>
                     
                     <Link to={`/actions/${task.id}`} className="block group">
-                      <h3 className={`text-base font-medium mt-2 transition group-hover:text-blue-600 dark:group-hover:text-blue-400 ${task.status !== 'PENDING' ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                      <h3 className={`text-base font-medium mt-1.5 transition group-hover:text-blue-600 dark:group-hover:text-blue-400 ${task.status !== 'PENDING' ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
                         {task.title}
                       </h3>
                       
@@ -197,8 +303,81 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                         </p>
                       )}
                     </Link>
+
+                    {/* Quick Horizon Shift Actions */}
+                    {task.status === 'PENDING' && (
+                      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mr-0.5">Shift:</span>
+                        
+                        {task.timeHorizon !== 'TODAY' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              shiftHorizonMutation.mutate({ id: task.id, horizon: 'TODAY' });
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 font-medium transition"
+                          >
+                            Move to Today
+                          </button>
+                        )}
+
+                        {task.timeHorizon !== 'THIS_WEEK' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              shiftHorizonMutation.mutate({ id: task.id, horizon: 'THIS_WEEK' });
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40 font-medium transition"
+                          >
+                            Move to Week
+                          </button>
+                        )}
+
+                        {task.timeHorizon !== 'THIS_MONTH' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              shiftHorizonMutation.mutate({ id: task.id, horizon: 'THIS_MONTH' });
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40 font-medium transition"
+                          >
+                            To Month
+                          </button>
+                        )}
+
+                        {task.timeHorizon !== 'SOMEDAY' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              shiftHorizonMutation.mutate({ id: task.id, horizon: 'SOMEDAY' });
+                            }}
+                            className="text-[11px] px-2 py-0.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 dark:text-gray-300 border border-gray-200 dark:border-zinc-600 font-medium transition"
+                          >
+                            To Someday
+                          </button>
+                        )}
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssignDateTaskId(task.id);
+                            const d = task.deadline ? new Date(task.deadline) : new Date();
+                            if (!isNaN(d.getTime())) {
+                              const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+                              setAssignDateVal(localIso.slice(0, 10));
+                              const timePart = localIso.slice(11, 16);
+                              setAssignTimeVal(task.deadline && timePart !== '00:00' ? timePart : '');
+                            }
+                          }}
+                          className="text-[11px] px-2 py-0.5 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 font-medium transition flex items-center gap-1"
+                        >
+                          <Calendar className="w-3 h-3 text-gray-400" /> Assign Date
+                        </button>
+                      </div>
+                    )}
                   </div>
 
+                  {/* Right Action Buttons */}
                   <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 sm:items-center mt-3 sm:mt-0">
                     {task.status === 'PENDING' && (
                       <>
@@ -214,22 +393,6 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                         >
                           <XCircle className="w-4 h-4" /> Cancel
                         </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPostponeTaskId(task.id);
-                            const d = task.deadline ? new Date(task.deadline) : new Date();
-                            if (!isNaN(d.getTime())) {
-                              const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
-                              setPostponeDateVal(localIso.slice(0, 10));
-                              const timePart = localIso.slice(11, 16);
-                              setPostponeTimeVal(task.deadline && timePart !== '00:00' ? timePart : '');
-                            }
-                          }}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-lg text-sm font-medium transition border border-blue-200 dark:border-blue-800/30"
-                        >
-                          <Clock className="w-4 h-4" /> Postpone
-                        </button>
                       </>
                     )}
 
@@ -243,32 +406,33 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                   </div>
                 </div>
 
-                {postponeTaskId === task.id && (
+                {/* Inline Assign / Change Date Drawer */}
+                {assignDateTaskId === task.id && (
                   <div className="pt-3 border-t border-gray-100 dark:border-zinc-700 flex flex-col sm:flex-row gap-3 items-center">
                     <div className="flex-1 flex gap-2 w-full">
                       <input
                         type="date"
-                        value={postponeDateVal}
-                        onChange={(e) => setPostponeDateVal(e.target.value)}
+                        value={assignDateVal}
+                        onChange={(e) => setAssignDateVal(e.target.value)}
                         className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
                       />
                       <input
                         type="time"
-                        value={postponeTimeVal}
-                        onChange={(e) => setPostponeTimeVal(e.target.value)}
+                        value={assignTimeVal}
+                        onChange={(e) => setAssignTimeVal(e.target.value)}
                         className="w-full text-sm p-2 border border-gray-300 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-900 rounded-md dark:text-gray-100 focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button 
-                        onClick={() => setPostponeTaskId(null)}
-                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-700 rounded-md transition border border-transparent hover:border-gray-200 dark:hover:border-zinc-600"
+                        onClick={() => setAssignDateTaskId(null)}
+                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800 rounded-md transition"
                       >
                         Cancel
                       </button>
                       <button 
-                        onClick={() => handlePostpone(task.id)}
-                        disabled={!postponeDateVal}
+                        onClick={() => handleSaveAssignDate(task.id)}
+                        disabled={!assignDateVal}
                         className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-md transition shadow-sm"
                       >
                         Save Date
@@ -285,10 +449,10 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
       <NewTaskModal 
         isOpen={isNewTaskModalOpen} 
         onClose={() => setIsNewTaskModalOpen(false)}
-        defaultDate={
-          filter === 'tomorrow' ? format(addDays(new Date(), 1), "yyyy-MM-dd") : 
-          filter === 'today' ? format(new Date(), "yyyy-MM-dd") : 
-          ''
+        defaultHorizon={
+          filter === 'TODAY' || filter === 'THIS_WEEK' || filter === 'THIS_MONTH' || filter === 'SOMEDAY' 
+            ? filter 
+            : 'TODAY'
         }
       />
     </div>

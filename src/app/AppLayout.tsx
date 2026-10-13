@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
-import { Users, Settings, LogOut, CalendarCheck, Link2, Briefcase } from 'lucide-react';
+import { Users, Settings, LogOut, CalendarCheck, Link2, Briefcase, Sparkles } from 'lucide-react';
 import { cn } from '../shared/utils/cn';
 import QuickAddSheet from '../modules/leads/components/QuickAddSheet';
 import RemindersWidget from '../modules/leads/components/RemindersWidget';
@@ -10,6 +10,7 @@ const MODULES_NAV = [
   { name: 'Leads', path: '/leads', icon: Users },
   { name: 'Collaborators', path: '/collaborators', icon: Briefcase },
   { name: 'Staffing / ATS', path: '/staffing', icon: Briefcase },
+  { name: 'Vault', path: '/vault', icon: Sparkles },
   { name: 'Links', path: '/links', icon: Link2 },
   // { name: 'Pipeline', path: '/pipeline', icon: Columns },
   // { name: 'Reports', path: '/reports', icon: FileBarChart },

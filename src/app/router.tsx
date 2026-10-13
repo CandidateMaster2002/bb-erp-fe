@@ -9,6 +9,7 @@ import ReportsDashboard from '../modules/leads/pages/Reports';
 import CategorySettings from '../modules/settings/pages/CategorySettings';
 import ActionsAgenda from '../modules/actions/pages/ActionsAgenda';
 import ActionDetail from '../modules/actions/pages/ActionDetail';
+import VaultList from '../modules/vault/pages/VaultList';
 import GlobalLinks from '../modules/links/pages/GlobalLinks';
 
 import StaffingLayout from '../modules/staffing/pages/StaffingLayout';
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: 'reports',
         element: <ReportsDashboard />,
+      },
+      {
+        path: 'vault',
+        element: <VaultList />,
       },
       {
         path: 'links',

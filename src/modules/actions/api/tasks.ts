@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/client';
 
+export type TimeHorizon = 'TODAY' | 'THIS_WEEK' | 'THIS_MONTH' | 'SOMEDAY';
+
 export interface SubAction {
   id: number;
   taskId: number;
@@ -16,7 +18,8 @@ export interface Task {
   id: number;
   title: string;
   description?: string;
-  deadline?: string;
+  deadline?: string | null;
+  timeHorizon?: TimeHorizon | string;
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   recurrenceGroupId?: string;
   createdAt: string;
@@ -31,6 +34,7 @@ export const taskKeys = {
   date: (date: string) => [...taskKeys.all, 'date', date] as const,
   range: (from: string, to: string) => [...taskKeys.all, 'range', from, to] as const,
   status: (status: string) => [...taskKeys.all, 'status', status] as const,
+  horizon: (horizon: string) => [...taskKeys.all, 'horizon', horizon] as const,
 };
 
 export const useTasksToday = () => useQuery({
@@ -53,6 +57,12 @@ export const useTasksByRange = (from: string, to: string) => useQuery({
 export const useTasksByStatus = (status: 'PENDING' | 'COMPLETED' | 'CANCELLED') => useQuery({
   queryKey: taskKeys.status(status),
   queryFn: async () => (await api.get<Task[]>(`/tasks/status/${status}`)).data
+});
+
+export const useTasksByHorizon = (horizon: TimeHorizon | string) => useQuery({
+  queryKey: taskKeys.horizon(horizon),
+  queryFn: async () => (await api.get<Task[]>(`/tasks/horizon/${horizon}`)).data,
+  enabled: !!horizon,
 });
 
 export const useTaskDetail = (id: number | string) => useQuery({
@@ -81,6 +91,23 @@ export const useUpdateTask = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number | string, data: Partial<Task> }) => (await api.put(`/tasks/${id}`, data)).data,
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+      qc.invalidateQueries({ queryKey: taskKeys.detail(vars.id) });
+    }
+  });
+};
+
+export const useShiftTaskHorizon = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, horizon, deadline }: { id: number | string; horizon: TimeHorizon | string; deadline?: string | null }) => {
+      const params: Record<string, string> = { horizon };
+      if (deadline !== undefined && deadline !== null) {
+        params.deadline = deadline;
+      }
+      return (await api.patch<Task>(`/tasks/${id}/horizon`, null, { params })).data;
+    },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: taskKeys.all });
       qc.invalidateQueries({ queryKey: taskKeys.detail(vars.id) });

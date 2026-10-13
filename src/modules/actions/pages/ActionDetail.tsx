@@ -8,9 +8,10 @@ import {
   useDeleteTask,
   useCreateSubAction,
   useUpdateSubActionStatus,
-  useDeleteSubAction
+  useDeleteSubAction,
+  useShiftTaskHorizon
 } from '../api/tasks';
-import type { SubAction } from '../api/tasks';
+import type { SubAction, TimeHorizon } from '../api/tasks';
 import { 
   ArrowLeft, 
   CheckCircle2, 
@@ -40,6 +41,7 @@ export default function ActionDetail() {
   const createSubAction = useCreateSubAction();
   const updateSubActionStatus = useUpdateSubActionStatus();
   const deleteSubAction = useDeleteSubAction();
+  const shiftHorizon = useShiftTaskHorizon();
 
   // Create Subaction state
   const [isCreatingSubaction, setIsCreatingSubaction] = useState(false);
@@ -240,6 +242,19 @@ export default function ActionDetail() {
               Recurring Task
             </span>
           )}
+
+          {task.timeHorizon && (
+            <span className={`text-xs px-2.5 py-1 rounded-md font-medium border ${
+              task.timeHorizon === 'TODAY' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' :
+              task.timeHorizon === 'THIS_WEEK' ? 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800' :
+              task.timeHorizon === 'THIS_MONTH' ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' :
+              'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+            }`}>
+              Horizon: {task.timeHorizon === 'TODAY' ? 'Today' :
+                        task.timeHorizon === 'THIS_WEEK' ? 'This Week' :
+                        task.timeHorizon === 'THIS_MONTH' ? 'This Month' : 'Backlog / Someday'}
+            </span>
+          )}
         </div>
 
         <div>
@@ -251,6 +266,25 @@ export default function ActionDetail() {
             <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-2 whitespace-pre-wrap">
               {task.description}
             </p>
+          )}
+
+          {task.status === 'PENDING' && (
+            <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-700/60 flex items-center gap-2 flex-wrap text-xs">
+              <span className="text-gray-400 font-medium">Shift Horizon:</span>
+              {(['TODAY', 'THIS_WEEK', 'THIS_MONTH', 'SOMEDAY'] as TimeHorizon[]).map(h => (
+                <button
+                  key={h}
+                  onClick={() => shiftHorizon.mutate({ id: task.id, horizon: h })}
+                  className={`px-2.5 py-1 rounded-md font-medium transition border ${
+                    task.timeHorizon === h 
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                      : 'bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-zinc-700'
+                  }`}
+                >
+                  {h === 'TODAY' ? 'Today' : h === 'THIS_WEEK' ? 'This Week' : h === 'THIS_MONTH' ? 'This Month' : 'Someday'}
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
