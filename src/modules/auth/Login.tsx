@@ -32,6 +32,9 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-900 p-4">
       <div className="w-full max-w-sm space-y-6 rounded-lg bg-white dark:bg-zinc-800 p-8 shadow-md">
         <div className="space-y-2 text-center">
+          <div className="w-12 h-12 mx-auto rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xl shadow-md">
+            BE
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">BoltBlazers ERP</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Enter password to access</p>
         </div>

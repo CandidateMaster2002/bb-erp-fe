@@ -161,7 +161,7 @@ export default function VaultList() {
 
       {/* Filter Tabs & Archive Toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-200 dark:border-zinc-800 pb-3">
-        <div className="flex flex-wrap items-center gap-1 bg-gray-100 dark:bg-zinc-800/80 p-1 rounded-xl">
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800/80 p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full">
           {CATEGORIES.map(cat => {
             const Icon = cat.icon;
             const isSelected = selectedCategory === cat.key;
@@ -169,13 +169,13 @@ export default function VaultList() {
               <button
                 key={cat.key}
                 onClick={() => setSelectedCategory(cat.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition whitespace-nowrap shrink-0 ${
                   isSelected
-                    ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm'
+                    ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-white shadow-sm font-semibold'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${cat.color}`} />
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${cat.color}`} />
                 {cat.label}
               </button>
             );

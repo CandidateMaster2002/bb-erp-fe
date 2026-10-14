@@ -142,7 +142,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
         <div className="sticky top-0 z-10 bg-gray-50 dark:bg-zinc-900 py-2 -mt-2 -mx-4 px-4 space-y-2 border-b border-gray-200 dark:border-zinc-800">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
             {/* Primary Time Horizon Segmented Control */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-gray-200/70 dark:bg-zinc-800/80 p-1 rounded-xl">
+            <div className="flex items-center gap-1 bg-gray-200/70 dark:bg-zinc-800/80 p-1 rounded-xl overflow-x-auto no-scrollbar max-w-full">
               {HORIZON_TABS.map(tab => {
                 const Icon = tab.icon;
                 const isSelected = filter === tab.key;
@@ -150,13 +150,13 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
                   <button
                     key={tab.key}
                     onClick={() => setFilter(tab.key)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-lg transition whitespace-nowrap shrink-0 ${
                       isSelected 
                         ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-200/60 dark:hover:bg-zinc-700/50'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
                     {tab.label}
                   </button>
                 );
@@ -166,20 +166,20 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
             {/* Action Button */}
             <button 
               onClick={() => setIsNewTaskModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap self-end lg:self-auto"
+              className="flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition shadow-sm whitespace-nowrap shrink-0 self-end lg:self-auto"
             >
               <Plus className="w-4 h-4" /> New Task
             </button>
           </div>
 
           {/* Secondary Filters */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-gray-400 font-medium">Other:</span>
+          <div className="flex items-center gap-2 text-xs overflow-x-auto no-scrollbar pb-1">
+            <span className="text-gray-400 font-medium whitespace-nowrap shrink-0">Other:</span>
             {(['all', 'completed', 'cancelled'] as TaskFilter[]).map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-2.5 py-1 rounded-md capitalize transition font-medium ${
+                className={`px-2.5 py-1 rounded-md capitalize transition font-medium whitespace-nowrap shrink-0 ${
                   filter === f
                     ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
                     : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800'
@@ -190,7 +190,7 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
             ))}
 
             {/* Date Picker Input */}
-            <div className="flex items-center gap-1 pl-2 border-l border-gray-300 dark:border-zinc-700 ml-1">
+            <div className="flex items-center gap-1 pl-2 border-l border-gray-300 dark:border-zinc-700 ml-1 shrink-0">
               <input 
                 type="date"
                 value={filter === 'custom-range' ? customRange.from : filter === 'custom-date' ? customDate : ''}

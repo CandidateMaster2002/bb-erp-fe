@@ -44,7 +44,7 @@ export default function VendorsList() {
       </div>
 
       {(isAdding || editingId) && (
-        <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex items-center gap-3 bg-blue-50/50 dark:bg-blue-900/10">
+        <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-blue-50/50 dark:bg-blue-900/10">
           <input
             autoFocus
             type="text"
@@ -53,12 +53,14 @@ export default function VendorsList() {
             onChange={e => setNameVal(e.target.value)}
             className="flex-1 px-3 py-2 border rounded-md dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
           />
-          <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
-            Save
-          </button>
-          <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-md">
-            Cancel
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+              Save
+            </button>
+            <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="flex-1 sm:flex-none px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-md">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 

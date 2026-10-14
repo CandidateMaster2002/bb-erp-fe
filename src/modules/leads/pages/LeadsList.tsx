@@ -37,7 +37,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table'); // Default to table for denser view
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table';
+  });
   
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);

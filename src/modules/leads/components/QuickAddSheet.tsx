@@ -94,7 +94,7 @@ export default function QuickAddSheet() {
   return (
     <Drawer.Root open={open} onOpenChange={setOpen}>
       <Drawer.Trigger asChild>
-        <button className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition-colors z-50">
+        <button className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-4 md:bottom-8 md:right-8 w-14 h-14 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-blue-700 active:scale-95 transition-all z-40 touch-manipulation">
           <Plus className="w-6 h-6" />
         </button>
       </Drawer.Trigger>

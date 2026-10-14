@@ -57,7 +57,7 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-zinc-900 min-h-full pb-24">
+    <div className="bg-gray-50 dark:bg-zinc-900 min-h-full pb-36">
       {/* Header */}
       <div className="bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 sticky top-0 z-10">
         <div className="p-4 flex items-start gap-4">
@@ -173,8 +173,8 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
       </div>
 
       {/* Sticky Bottom Log Interaction */}
-      <div className="fixed bottom-16 md:bottom-0 left-0 md:left-64 right-0 p-4 bg-white dark:bg-zinc-950 border-t border-gray-200 dark:border-zinc-800 z-30">
-        <button onClick={() => setLogSheetOpen(true)} className="w-full py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-md font-medium transition flex justify-center items-center gap-2">
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] md:bottom-0 left-0 md:left-64 right-0 p-3 sm:p-4 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-sm border-t border-gray-200 dark:border-zinc-800 z-30">
+        <button onClick={() => setLogSheetOpen(true)} className="w-full py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-md font-medium transition flex justify-center items-center gap-2 shadow-sm">
            Log Interaction
         </button>
       </div>
