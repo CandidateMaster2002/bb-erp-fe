@@ -194,3 +194,97 @@ export const useDeleteSubAction = () => {
     }
   });
 };
+
+// ========== Bulk Task Hooks ==========
+
+export const useBulkShiftTaskHorizon = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ids,
+      horizon,
+      deadline,
+    }: {
+      ids: (number | string)[];
+      horizon: TimeHorizon | string;
+      deadline?: string | null;
+    }) => {
+      const params: Record<string, string> = { horizon };
+      if (deadline !== undefined && deadline !== null) {
+        params.deadline = deadline;
+      }
+      return Promise.allSettled(
+        ids.map((id) => api.patch(`/tasks/${id}/horizon`, null, { params }))
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+};
+
+export const useBulkCompleteTasks = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: (number | string)[]) => {
+      return Promise.allSettled(
+        ids.map((id) => api.put(`/tasks/${id}/complete`))
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+};
+
+export const useBulkCancelTasks = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: (number | string)[]) => {
+      return Promise.allSettled(
+        ids.map((id) => api.put(`/tasks/${id}/cancel`))
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+};
+
+export const useBulkDeleteTasks = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: (number | string)[]) => {
+      return Promise.allSettled(
+        ids.map((id) => api.delete(`/tasks/${id}`))
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+};
+
+export const useBulkAssignDate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ids,
+      deadline,
+      horizon = 'TODAY',
+    }: {
+      ids: (number | string)[];
+      deadline: string;
+      horizon?: TimeHorizon | string;
+    }) => {
+      const params: Record<string, string> = { deadline, horizon };
+      return Promise.allSettled(
+        ids.map((id) => api.patch(`/tasks/${id}/horizon`, null, { params }))
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+};
+
