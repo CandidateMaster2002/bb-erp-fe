@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
 import ScheduleFollowUpModal from '../components/ScheduleFollowUpModal';
 import EditLeadDetailsModal from '../components/EditLeadDetailsModal';
+import BulkActionsBar from '../components/BulkActionsBar';
 import type { Lead } from '../types';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
@@ -41,6 +42,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     return typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table';
   });
   
+  // Multi-select state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
@@ -95,6 +99,36 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   }
 
   const { data, isLoading } = useLeadsList(currentFilters);
+
+  // Selection helpers
+  const toggleSelect = (id: string | number) => {
+    const strId = id.toString();
+    setSelectedIds(prev => 
+      prev.includes(strId) ? prev.filter(i => i !== strId) : [...prev, strId]
+    );
+  };
+
+  const isAllSelected = Boolean(
+    data?.content && 
+    data.content.length > 0 && 
+    data.content.every(l => selectedIds.includes(l.id.toString()))
+  );
+
+  const handleSelectAll = () => {
+    if (!data?.content || data.content.length === 0) return;
+    if (isAllSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(data.content.map(l => l.id.toString()));
+    }
+  };
+
+  const selectedLeads = data?.content?.filter(l => selectedIds.includes(l.id.toString())) || [];
+
+  // Reset selection when search / filter changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), activeFilterId]);
 
   const handleSaveFilter = () => {
     const name = prompt('Enter a name for this filter:');
@@ -212,28 +246,192 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         ) : data?.content && data.content.length > 0 ? (
           viewMode === 'card' ? (
             <div className="space-y-3">
-              {data.content.map(lead => (
-                <Link key={lead.id} to={`/${routePath}/${lead.id}`} className="block">
-                  <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 transition">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{lead.fullName}</h3>
-                          {lead.linkedinUrl && (
-                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                              <Link2 className="w-4 h-4" />
-                            </button>
-                          )}
-                          <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
+              {/* Card Selection Header Bar */}
+              <div className="flex items-center justify-between px-1 py-1 text-xs text-gray-500 dark:text-gray-400">
+                <label className="flex items-center gap-2 cursor-pointer font-medium hover:text-gray-900 dark:hover:text-gray-200">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Select All ({data.content.length})</span>
+                </label>
+                {selectedIds.length > 0 && (
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">
+                    {selectedIds.length} of {data.content.length} selected
+                  </span>
+                )}
+              </div>
+
+              {data.content.map(lead => {
+                const isSelected = selectedIds.includes(lead.id.toString());
+                return (
+                  <div 
+                    key={lead.id} 
+                    className={`bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border transition flex items-start gap-3 ${
+                      isSelected 
+                        ? 'border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/20 dark:bg-blue-950/10' 
+                        : 'border-gray-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700'
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <div className="pt-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(lead.id)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <Link to={`/${routePath}/${lead.id}`} className="group block">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 truncate">{lead.fullName}</h3>
+                              {lead.linkedinUrl && (
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                                  <Link2 className="w-4 h-4" />
+                                </button>
+                              )}
+                              <span className="text-xs text-gray-400 dark:text-gray-500">#{lead.id}</span>
+                            </div>
+                            
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                              {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
+                            </p>
+                          </Link>
+                          
+                          <div className="group/contact flex items-center h-6 mt-1 cursor-pointer" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
+                            {editingContactId === lead.id.toString() ? (
+                              <div className="flex items-center gap-1 w-full max-w-[200px]" onClick={e => e.preventDefault()}>
+                                <input 
+                                  type="text"
+                                  autoFocus
+                                  value={editingContactValue}
+                                  onChange={e => setEditingContactValue(e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleContactSave(lead.id);
+                                    if (e.key === 'Escape') setEditingContactId(null);
+                                  }}
+                                  className="w-full px-2 py-0.5 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                                  placeholder="Mobile No"
+                                />
+                                <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 p-0.5 hover:bg-green-50 rounded dark:hover:bg-green-900/30">
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 p-0.5 hover:bg-gray-100 rounded dark:hover:bg-zinc-700">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                {lead.mobileNumber ? (
+                                  <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                                    <Phone className="w-3 h-3" />
+                                    <span>{lead.mobileNumber}</span>
+                                  </div>
+                                ) : (
+                                  <div className="text-xs text-gray-400 italic flex items-center gap-1"><Phone className="w-3 h-3 opacity-50" /> Add contact</div>
+                                )}
+                                <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 ml-2 text-gray-400 transition" />
+                              </>
+                            )}
+                          </div>
                         </div>
-                        
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
-                        </p>
-                        
-                        <div className="group/contact flex items-center h-6 mt-1 cursor-pointer" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
+                        <div className="flex gap-1 flex-wrap justify-end items-start">
+                          {lead.categories?.map(c => (
+                            <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                              {c.name}
+                            </span>
+                          ))}
+                          <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="ml-1 p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded-md transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                            className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
+                            title="Quick Update"
+                          >
+                            <Zap className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
+                            className="ml-1 p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded-md transition"
+                            title="Delete Lead"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2 flex-wrap text-xs">
+                        {lead.nextFollowUpDate && (
+                          <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
+                            Next: {format(new Date(lead.nextFollowUpDate), 'MMM d')}
+                          </span>
+                        )}
+                        {lead.lastContactedDate && (
+                          <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300 flex items-center gap-1">
+                            Last: {format(new Date(lead.lastContactedDate), 'MMM d')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
+                <thead className="bg-gray-50 dark:bg-zinc-900/50">
+                  <tr>
+                    <th scope="col" className="w-10 px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                        title={isAllSelected ? "Deselect All" : "Select All"}
+                      />
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company / Title</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Contact</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Categories</th>
+                    <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
+                  {data.content.map(lead => {
+                    const isSelected = selectedIds.includes(lead.id.toString());
+                    return (
+                      <tr 
+                        key={lead.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition ${
+                          isSelected ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''
+                        }`}
+                      >
+                        <td className="w-10 px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(lead.id)}
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Link to={`/${routePath}/${lead.id}`} className="block">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                          {lead.company || '-'}
+                          {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300 relative group/contact" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
                           {editingContactId === lead.id.toString() ? (
-                            <div className="flex items-center gap-1 w-full max-w-[200px]" onClick={e => e.preventDefault()}>
+                            <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
                               <input 
                                 type="text"
                                 autoFocus
@@ -243,162 +441,63 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                                   if (e.key === 'Enter') handleContactSave(lead.id);
                                   if (e.key === 'Escape') setEditingContactId(null);
                                 }}
-                                className="w-full px-2 py-0.5 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                                className="w-28 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
                                 placeholder="Mobile No"
                               />
-                              <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 p-0.5 hover:bg-green-50 rounded dark:hover:bg-green-900/30">
+                              <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition">
                                 <Check className="w-3 h-3" />
                               </button>
-                              <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 p-0.5 hover:bg-gray-100 rounded dark:hover:bg-zinc-700">
+                              <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition">
                                 <X className="w-3 h-3" />
                               </button>
                             </div>
                           ) : (
-                            <>
-                              {lead.mobileNumber ? (
-                                <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                                  <Phone className="w-3 h-3" />
-                                  <span>{lead.mobileNumber}</span>
-                                </div>
-                              ) : (
-                                <div className="text-xs text-gray-400 italic flex items-center gap-1"><Phone className="w-3 h-3 opacity-50" /> Add contact</div>
-                              )}
-                              <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 ml-2 text-gray-400 transition" />
-                            </>
+                            <div className="flex items-center gap-2 cursor-pointer">
+                              <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
+                              <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
+                            </div>
                           )}
-                        </div>
-                      </div>
-                      <div className="flex gap-1 flex-wrap justify-end items-start">
-                        {lead.categories?.map(c => (
-                          <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
-                            {c.name}
-                          </span>
-                        ))}
-                        <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="ml-1 p-1 text-gray-500 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded-md transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
-                        <button 
-                          onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
-                          className="ml-1 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded-md transition"
-                          title="Quick Update"
-                        >
-                          <Zap className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
-                          className="ml-1 p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded-md transition"
-                          title="Delete Lead"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex gap-2 flex-wrap text-xs">
-                      {lead.nextFollowUpDate && (
-                        <span className="bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-2 py-1 rounded flex items-center gap-1">
-                          Next: {format(new Date(lead.nextFollowUpDate), 'MMM d')}
-                        </span>
-                      )}
-                      {lead.lastContactedDate && (
-                        <span className="bg-gray-100 dark:bg-zinc-700 px-2 py-1 rounded dark:text-gray-300 flex items-center gap-1">
-                          Last: {format(new Date(lead.lastContactedDate), 'MMM d')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
-                <thead className="bg-gray-50 dark:bg-zinc-900/50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company / Title</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Contact</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Categories</th>
-                    <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
-                  {data.content.map(lead => (
-                    <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Link to={`/${routePath}/${lead.id}`} className="block">
-                          <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        {lead.company || '-'}
-                        {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300 relative group/contact" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
-                        {editingContactId === lead.id.toString() ? (
-                          <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
-                            <input 
-                              type="text"
-                              autoFocus
-                              value={editingContactValue}
-                              onChange={e => setEditingContactValue(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') handleContactSave(lead.id);
-                                if (e.key === 'Escape') setEditingContactId(null);
-                              }}
-                              className="w-28 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
-                              placeholder="Mobile No"
-                            />
-                            <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition">
-                              <Check className="w-3 h-3" />
-                            </button>
-                            <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition">
-                              <X className="w-3 h-3" />
-                            </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 flex-wrap">
+                            {lead.categories?.map(c => (
+                              <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                                {c.name}
+                              </span>
+                            ))}
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-2 cursor-pointer">
-                            <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
-                            <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {lead.categories?.map(c => (
-                            <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
-                              {c.name}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="flex justify-end gap-1">
-                          {lead.linkedinUrl && (
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-right">
+                          <div className="flex justify-end gap-1">
+                            {lead.linkedinUrl && (
+                              <button 
+                                onClick={(e) => { e.preventDefault(); window.open(lead.linkedinUrl, '_blank'); }}
+                                className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                                title="LinkedIn Profile"
+                              >
+                                <LinkedinIcon className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
                             <button 
-                              onClick={(e) => { e.preventDefault(); window.open(lead.linkedinUrl, '_blank'); }}
-                              className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
-                              title="LinkedIn Profile"
+                              onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                              title="Quick Update"
                             >
-                              <LinkedinIcon className="w-4 h-4" />
+                              <Zap className="w-4 h-4" />
                             </button>
-                          )}
-                          <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
-                          <button 
-                            onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
-                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
-                            title="Quick Update"
-                          >
-                            <Zap className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition"
-                            title="Delete Lead"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <button 
+                              onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition"
+                              title="Delete Lead"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -409,6 +508,16 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </div>
         )}
       </div>
+
+      {/* Bulk Actions Floating Bar */}
+      <BulkActionsBar
+        selectedLeads={selectedLeads}
+        onClearSelection={() => setSelectedIds([])}
+        onSelectAll={handleSelectAll}
+        isAllSelected={isAllSelected}
+        totalCount={data?.content?.length || 0}
+        recordType={recordType}
+      />
 
       <QuickUpdateModal lead={quickUpdateLead} onClose={() => setQuickUpdateLead(null)} />
       <EditLeadDetailsModal lead={editLead} onClose={() => setEditLead(null)} />

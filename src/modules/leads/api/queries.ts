@@ -396,3 +396,84 @@ export const useDeleteLead = () => {
   });
 };
 
+export const useBulkUpdateLeadCategories = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      leads,
+      categoryIdsToApply,
+      mode = 'merge',
+      groupValueIdsToReplace = [],
+    }: {
+      leads: Lead[];
+      categoryIdsToApply: number[];
+      mode?: 'merge' | 'replace_group';
+      groupValueIdsToReplace?: number[];
+    }) => {
+      const results = await Promise.allSettled(
+        leads.map(async (lead) => {
+          const currentIds = (lead.categories || []).map((c) => Number(c.id));
+          let nextIds: number[];
+
+          if (mode === 'replace_group' && groupValueIdsToReplace.length > 0) {
+            nextIds = currentIds.filter((id) => !groupValueIdsToReplace.includes(id));
+            categoryIdsToApply.forEach((id) => {
+              if (!nextIds.includes(id)) nextIds.push(id);
+            });
+          } else {
+            nextIds = [...currentIds];
+            categoryIdsToApply.forEach((id) => {
+              if (!nextIds.includes(id)) nextIds.push(id);
+            });
+          }
+
+          return api.put(`/leads/${lead.id}/categories`, nextIds);
+        })
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+export const useBulkCreateLeadLogs = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      leadIds,
+      log,
+    }: {
+      leadIds: (string | number)[];
+      log: Partial<LeadLog>;
+    }) => {
+      const results = await Promise.allSettled(
+        leadIds.map((id) => api.post(`/leads/${id}/logs`, log))
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: logKeys.all });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+export const useBulkDeleteLeads = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (leadIds: (string | number)[]) => {
+      const results = await Promise.allSettled(
+        leadIds.map((id) => api.delete(`/leads/${id}`))
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+
