@@ -27,6 +27,7 @@ interface BulkActionsBarProps {
   isAllSelected: boolean;
   totalCount: number;
   recordType?: 'LEAD' | 'COLLABORATOR';
+  isFullScreen?: boolean;
 }
 
 export default function BulkActionsBar({
@@ -36,6 +37,7 @@ export default function BulkActionsBar({
   isAllSelected,
   totalCount,
   recordType = 'LEAD',
+  isFullScreen = false,
 }: BulkActionsBarProps) {
   const count = selectedLeads.length;
 
@@ -253,7 +255,11 @@ export default function BulkActionsBar({
       )}
 
       {/* Floating Bulk Actions Bar */}
-      <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 left-3 right-3 md:left-72 md:right-8 z-40 bg-zinc-900/95 dark:bg-zinc-800/95 text-white p-2.5 sm:p-3 rounded-2xl shadow-2xl border border-zinc-700/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-2.5 transition-all">
+      <div className={`fixed ${
+        isFullScreen 
+          ? 'bottom-6 left-3 right-3 md:left-8 md:right-8 z-50' 
+          : 'bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 left-3 right-3 md:left-72 md:right-8 z-40'
+      } bg-zinc-900/95 dark:bg-zinc-800/95 text-white p-2.5 sm:p-3 rounded-2xl shadow-2xl border border-zinc-700/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-2.5 transition-all`}>
         {/* Left: Count & Select All */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-blue-600/30 text-blue-300 border border-blue-500/40 px-2.5 py-1 rounded-lg text-xs font-semibold">

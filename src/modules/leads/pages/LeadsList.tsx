@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -61,6 +61,59 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     setPage(0);
     localStorage.setItem('leads_page_size', String(newSize));
   };
+
+  // Full Screen State
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const toggleFullScreen = async () => {
+    if (!isFullScreen) {
+      setIsFullScreen(true);
+      try {
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn('Native fullscreen API error or unsupported:', err);
+      }
+    } else {
+      setIsFullScreen(false);
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      } catch (err) {
+        console.warn('Exit fullscreen error:', err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullScreen) {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        setIsFullScreen(false);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, [isFullScreen]);
 
   // Tag filter states
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -189,7 +242,300 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
   const routePath = recordType === 'COLLABORATOR' ? 'collaborators' : 'leads';
   const title = recordType === 'COLLABORATOR' ? 'Collaborators' : 'Leads';
-  
+
+  const renderTableView = () => (
+    <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-auto h-full">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
+        <thead className="bg-gray-50 dark:bg-zinc-900 sticky top-0 z-10 shadow-sm">
+          <tr>
+            <th scope="col" className="w-10 px-3 py-3 text-center bg-gray-50 dark:bg-zinc-900">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={handleSelectAll}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                title={isAllSelected ? "Deselect All" : "Select All"}
+              />
+            </th>
+            <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Lead</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Company / Title</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Contact</th>
+            <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Tags & Categories</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
+          {data?.content?.map(lead => {
+            const isSelected = selectedIds.includes(lead.id.toString());
+            return (
+              <tr 
+                key={lead.id} 
+                className={`hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition ${
+                  isSelected ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''
+                }`}
+              >
+                <td className="w-10 px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(lead.id)}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                  />
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <Link to={`/${routePath}/${lead.id}`} className="block">
+                    <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
+                  </Link>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
+                  {lead.company || '-'}
+                  {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300 relative group/contact" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
+                  {editingContactId === lead.id.toString() ? (
+                    <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
+                      <input 
+                        type="text"
+                        autoFocus
+                        value={editingContactValue}
+                        onChange={e => setEditingContactValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleContactSave(lead.id);
+                          if (e.key === 'Escape') setEditingContactId(null);
+                        }}
+                        className="w-28 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                        placeholder="Mobile No"
+                      />
+                      <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition">
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 cursor-pointer">
+                      <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
+                      <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex gap-1 flex-wrap">
+                    {/* Tags */}
+                    {lead.tags && Array.isArray(lead.tags) && lead.tags.map((tagItem, idx) => {
+                      const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
+                      const tagId = typeof tagItem === 'string'
+                        ? availableTags?.find(t => t.name.toLowerCase() === tagItem.toLowerCase())?.id
+                        : tagItem.id;
+                      const isFiltering = tagId ? selectedTagIds.includes(tagId) : false;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            if (tagId) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleTag(tagId);
+                            }
+                          }}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition ${
+                            isFiltering
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
+                          }`}
+                          title={tagId ? "Click to filter by tag" : undefined}
+                        >
+                          #{tagName}
+                        </button>
+                      );
+                    })}
+                    {lead.categories?.filter(c => !c.name.toLowerCase().includes('campaign')).map(c => (
+                      <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-right">
+                  <div className="flex justify-end gap-1">
+                    {lead.linkedinUrl && (
+                      <button 
+                        onClick={(e) => { e.preventDefault(); window.open(lead.linkedinUrl, '_blank'); }}
+                        className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                        title="LinkedIn Profile"
+                      >
+                        <LinkedinIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
+                    <button 
+                      onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                      title="Quick Update"
+                    >
+                      <Zap className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition"
+                      title="Delete Lead"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  const renderPagination = () => {
+    if (!data || data.totalPages <= 1) return null;
+    return (
+      <div className="mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm shrink-0">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          Showing page <span className="font-semibold text-gray-700 dark:text-gray-200">{page + 1}</span> of{' '}
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{data.totalPages}</span> ({data.totalElements} total{' '}
+          {recordType === 'COLLABORATOR' ? 'collaborators' : 'leads'})
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            <span>Previous</span>
+          </button>
+
+          <div className="flex items-center gap-1 px-1">
+            {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
+              let pageNum = i;
+              if (data.totalPages > 5) {
+                if (page >= 3 && page <= data.totalPages - 3) {
+                  pageNum = page - 2 + i;
+                } else if (page > data.totalPages - 3) {
+                  pageNum = data.totalPages - 5 + i;
+                }
+              }
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={`min-w-[28px] h-7 text-xs font-medium rounded transition ${
+                    page === pageNum
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-600'
+                  }`}
+                >
+                  {pageNum + 1}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
+            disabled={page >= data.totalPages - 1}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+          >
+            <span>Next</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Full Screen Exclusive Table View
+  if (isFullScreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col p-3 sm:p-4 overflow-hidden">
+        {/* Fullscreen Minimal Header */}
+        <div className="flex items-center justify-between pb-2.5 shrink-0 border-b border-gray-200 dark:border-zinc-800">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span>{title} Table</span>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                {data?.totalElements ?? data?.content?.length ?? 0} total
+              </span>
+            </h1>
+            {selectedIds.length > 0 && (
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                • {selectedIds.length} of {data?.content?.length || 0} selected
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-1 text-xs bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </div>
+
+            <button
+              onClick={toggleFullScreen}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:bg-gray-800 dark:hover:bg-zinc-200 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
+              title="Exit Full Screen (Esc)"
+            >
+              <Minimize2 className="w-3.5 h-3.5" />
+              <span>Exit Full Screen</span>
+              <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-[10px] bg-gray-700 dark:bg-zinc-300 dark:text-zinc-800 text-gray-200 rounded">Esc</kbd>
+            </button>
+          </div>
+        </div>
+
+        {/* Fullscreen Table - Only the table */}
+        <div className="flex-1 min-h-0 mt-3 overflow-hidden">
+          {isLoading ? (
+            <div className="text-center py-12 text-gray-500">{`Loading ${title.toLowerCase()}...`}</div>
+          ) : data?.content && data.content.length > 0 ? (
+            renderTableView()
+          ) : (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              {`No ${title.toLowerCase()} found.`}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination at bottom */}
+        {renderPagination()}
+
+        {/* Floating Bulk Actions Bar */}
+        <BulkActionsBar
+          selectedLeads={selectedLeads}
+          onClearSelection={() => setSelectedIds([])}
+          onSelectAll={handleSelectAll}
+          isAllSelected={isAllSelected}
+          totalCount={data?.content?.length || 0}
+          recordType={recordType}
+          isFullScreen={true}
+        />
+
+        <QuickUpdateModal lead={quickUpdateLead} onClose={() => setQuickUpdateLead(null)} />
+        <EditLeadDetailsModal lead={editLead} onClose={() => setEditLead(null)} />
+        <ScheduleFollowUpModal 
+          isOpen={!!followUpLeadId} 
+          onClose={() => setFollowUpLeadId(null)} 
+          leadId={followUpLeadId} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 h-full flex flex-col bg-gray-50 dark:bg-zinc-900">
@@ -242,6 +588,16 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Full Screen Button */}
+          <button
+            onClick={toggleFullScreen}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-md shadow-sm text-xs font-semibold transition ml-1"
+            title="Full Screen (Table Only)"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Full Screen</span>
+          </button>
         </div>
       </div>
 
@@ -633,154 +989,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               })}
             </div>
           ) : (
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
-                <thead className="bg-gray-50 dark:bg-zinc-900/50">
-                  <tr>
-                    <th scope="col" className="w-10 px-3 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        onChange={handleSelectAll}
-                        className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
-                        title={isAllSelected ? "Deselect All" : "Select All"}
-                      />
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company / Title</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Contact</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Tags & Categories</th>
-                    <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
-                  {data.content.map(lead => {
-                    const isSelected = selectedIds.includes(lead.id.toString());
-                    return (
-                      <tr 
-                        key={lead.id} 
-                        className={`hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition ${
-                          isSelected ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''
-                        }`}
-                      >
-                        <td className="w-10 px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelect(lead.id)}
-                            className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
-                          />
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <Link to={`/${routePath}/${lead.id}`} className="block">
-                            <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><span className="text-xs text-gray-400 dark:text-gray-500 font-normal">#{lead.id}</span>{lead.fullName}</div>
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                          {lead.company || '-'}
-                          {lead.jobTitle && <div className="text-xs text-gray-500 dark:text-gray-400">{lead.jobTitle}</div>}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-gray-600 dark:text-gray-300 relative group/contact" onClick={(e) => { if (editingContactId !== lead.id.toString()) { e.preventDefault(); setEditingContactId(lead.id.toString()); setEditingContactValue(lead.mobileNumber || ''); } }}>
-                          {editingContactId === lead.id.toString() ? (
-                            <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
-                              <input 
-                                type="text"
-                                autoFocus
-                                value={editingContactValue}
-                                onChange={e => setEditingContactValue(e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') handleContactSave(lead.id);
-                                  if (e.key === 'Escape') setEditingContactId(null);
-                                }}
-                                className="w-28 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
-                                placeholder="Mobile No"
-                              />
-                              <button onClick={(e) => { e.preventDefault(); handleContactSave(lead.id); }} className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition">
-                                <Check className="w-3 h-3" />
-                              </button>
-                              <button onClick={(e) => { e.preventDefault(); setEditingContactId(null); }} className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition">
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 cursor-pointer">
-                              <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
-                              <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1 flex-wrap">
-                            {/* Tags */}
-                          {lead.tags && Array.isArray(lead.tags) && lead.tags.map((tagItem, idx) => {
-                            const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
-                            const tagId = typeof tagItem === 'string'
-                              ? availableTags?.find(t => t.name.toLowerCase() === tagItem.toLowerCase())?.id
-                              : tagItem.id;
-                            const isFiltering = tagId ? selectedTagIds.includes(tagId) : false;
-                            return (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={(e) => {
-                                  if (tagId) {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    toggleTag(tagId);
-                                  }
-                                }}
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition ${
-                                  isFiltering
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
-                                }`}
-                                title={tagId ? "Click to filter by tag" : undefined}
-                              >
-                                #{tagName}
-                              </button>
-                            );
-                          })}
-                          {lead.categories?.filter(c => !c.name.toLowerCase().includes('campaign')).map(c => (
-                              <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
-                                {c.name}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <div className="flex justify-end gap-1">
-                            {lead.linkedinUrl && (
-                              <button 
-                                onClick={(e) => { e.preventDefault(); window.open(lead.linkedinUrl, '_blank'); }}
-                                className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
-                                title="LinkedIn Profile"
-                              >
-                                <LinkedinIcon className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button onClick={(e) => { e.preventDefault(); setEditLead(lead); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition" title="Edit Details"><Edit2 className="w-4 h-4" /></button>
-                            <button 
-                              onClick={(e) => { e.preventDefault(); setQuickUpdateLead(lead); }}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
-                              title="Quick Update"
-                            >
-                              <Zap className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.preventDefault(); handleDeleteLead(lead.id); }}
-                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition"
-                              title="Delete Lead"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            renderTableView()
           )
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
@@ -789,60 +998,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         )}
 
         {/* Pagination Controls */}
-        {data && data.totalPages > 1 && (
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              Showing page <span className="font-semibold text-gray-700 dark:text-gray-200">{page + 1}</span> of{' '}
-              <span className="font-semibold text-gray-700 dark:text-gray-200">{data.totalPages}</span> ({data.totalElements} total{' '}
-              {recordType === 'COLLABORATOR' ? 'collaborators' : 'leads'})
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span>Previous</span>
-              </button>
-
-              <div className="flex items-center gap-1 px-1">
-                {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
-                  let pageNum = i;
-                  if (data.totalPages > 5) {
-                    if (page >= 3 && page <= data.totalPages - 3) {
-                      pageNum = page - 2 + i;
-                    } else if (page > data.totalPages - 3) {
-                      pageNum = data.totalPages - 5 + i;
-                    }
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={`min-w-[28px] h-7 text-xs font-medium rounded transition ${
-                        page === pageNum
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-600'
-                      }`}
-                    >
-                      {pageNum + 1}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
-                disabled={page >= data.totalPages - 1}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                <span>Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
+        {renderPagination()}
       </div>
 
       {/* Bulk Actions Floating Bar */}
