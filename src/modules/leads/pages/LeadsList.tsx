@@ -72,56 +72,23 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     localStorage.setItem('leads_page_size', String(newSize));
   };
 
-  // Full Screen State
+  // Full Screen State (In-window full screen to preserve Chrome browser tabs)
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  const toggleFullScreen = async () => {
-    if (!isFullScreen) {
-      setIsFullScreen(true);
-      try {
-        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch (err) {
-        console.warn('Native fullscreen API error or unsupported:', err);
-      }
-    } else {
-      setIsFullScreen(false);
-      try {
-        if (document.fullscreenElement && document.exitFullscreen) {
-          await document.exitFullscreen();
-        }
-      } catch (err) {
-        console.warn('Exit fullscreen error:', err);
-      }
-    }
+  const toggleFullScreen = () => {
+    setIsFullScreen((prev) => !prev);
   };
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && isFullScreen) {
-        setIsFullScreen(false);
-      }
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullScreen) {
-        if (document.fullscreenElement && document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
-        }
         setIsFullScreen(false);
       }
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       window.removeEventListener('keydown', handleKeyDown);
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
     };
   }, [isFullScreen]);
 
