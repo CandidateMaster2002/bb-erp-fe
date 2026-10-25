@@ -24,6 +24,48 @@ export const useTags = () => {
   });
 };
 
+export const useCreateTag = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const { data } = await api.post('/tags', { name });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+export const useUpdateTag = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number | string; name: string }) => {
+      const { data } = await api.put(`/tags/${id}`, { name });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
+export const useDeleteTag = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number | string) => {
+      const { data } = await api.delete(`/tags/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+    },
+  });
+};
+
 export const useCategories = (type: 'LEAD' | 'COLLABORATOR' = 'LEAD') => {
   return useQuery({
     queryKey: leadsKeys.categories(type),

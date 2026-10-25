@@ -18,6 +18,7 @@ export interface CategoryGroup {
 export interface Tag {
   id: number;
   name: string;
+  leadCount?: number;
 }
 
 export interface Education {
