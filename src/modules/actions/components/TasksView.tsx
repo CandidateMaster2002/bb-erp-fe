@@ -190,13 +190,20 @@ export default function TasksView({ hideFilters, filterOverride }: { hideFilters
               })}
             </div>
 
-            {/* Action Button */}
-            <button 
-              onClick={() => setIsNewTaskModalOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition shadow-sm whitespace-nowrap shrink-0 self-end lg:self-auto"
-            >
-              <Plus className="w-4 h-4" /> New Task
-            </button>
+            {/* Action Button & Count */}
+            <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
+              {!isLoading && tasks && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                </span>
+              )}
+              <button 
+                onClick={() => setIsNewTaskModalOpen(true)}
+                className="flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition shadow-sm whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" /> New Task
+              </button>
+            </div>
           </div>
 
           {/* Secondary Filters */}

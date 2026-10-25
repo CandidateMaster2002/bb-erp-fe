@@ -177,7 +177,14 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   return (
     <div className="p-4 h-full flex flex-col bg-gray-50 dark:bg-zinc-900">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold dark:text-white">{title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold dark:text-white">{title}</h1>
+          {!isLoading && data && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm whitespace-nowrap">
+              {data.totalElements !== undefined ? `${data.totalElements} results` : `${data.content?.length || 0} results`}
+            </span>
+          )}
+        </div>
         <div className="flex items-center space-x-2">
           {Array.isArray(filtersData) && filtersData.length > 0 && (
             <select 
@@ -393,6 +400,30 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </select>
         ))}
       </div>
+
+      {/* Results Count & Status Bar */}
+      {!isLoading && data && (
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2.5 px-1">
+          <div className="flex items-center gap-2">
+            <span>
+              Showing <strong className="text-gray-900 dark:text-gray-100">{data.content?.length || 0}</strong>
+              {data.totalElements !== undefined && data.totalElements !== (data.content?.length || 0) && (
+                <> of <strong className="text-gray-900 dark:text-gray-100">{data.totalElements}</strong></>
+              )} {title.toLowerCase()}
+            </span>
+            {(Boolean(debouncedSearch) || hasMobileNo || selectedTagIds.length > 0 || Object.values(selectedCategoryIds).some(Boolean)) && (
+              <span className="text-blue-600 dark:text-blue-400 font-medium">
+                (filtered)
+              </span>
+            )}
+          </div>
+          {selectedIds.length > 0 && (
+            <span className="font-semibold text-blue-600 dark:text-blue-400">
+              {selectedIds.length} of {data.content?.length || 0} selected
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto pb-24">
         {isLoading ? (

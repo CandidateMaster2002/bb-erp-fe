@@ -251,8 +251,15 @@ export default function ActionsAgenda() {
   return (
     <div className="p-4 max-w-5xl mx-auto pb-24 h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold dark:text-white">Agenda</h1>
+            {!isLoading && actions && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm whitespace-nowrap">
+                {actions.length} {actions.length === 1 ? 'action' : 'actions'}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 p-1 rounded-lg border border-gray-200 dark:border-zinc-700">
             <button 
               onClick={() => setActiveTab('all')}

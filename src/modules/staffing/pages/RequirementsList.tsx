@@ -11,7 +11,14 @@ export default function RequirementsList() {
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-800 overflow-hidden">
       <div className="p-4 border-b border-gray-200 dark:border-zinc-800 flex justify-between items-center bg-gray-50 dark:bg-zinc-800/50">
-        <h2 className="font-semibold text-gray-900 dark:text-gray-100">Requirements (Job Orders)</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">Requirements (Job Orders)</h2>
+          {!isLoading && requirements && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              {requirements.length} {requirements.length === 1 ? 'order' : 'orders'}
+            </span>
+          )}
+        </div>
         <button
           onClick={() => navigate('/staffing/requirements/new')}
           className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"

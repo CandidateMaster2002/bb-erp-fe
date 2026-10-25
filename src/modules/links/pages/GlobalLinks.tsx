@@ -70,10 +70,17 @@ export default function GlobalLinks() {
     <div className="p-4 md:p-6 max-w-5xl mx-auto pb-24 md:pb-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Link2 className="w-6 h-6 text-blue-600 dark:text-blue-500" />
-            Team Links
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Link2 className="w-6 h-6 text-blue-600 dark:text-blue-500" />
+              Team Links
+            </h1>
+            {!isLoading && links && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-sm whitespace-nowrap">
+                {links.length} {links.length === 1 ? 'link' : 'links'}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage important global links and resources for your team.</p>
         </div>
         <button 

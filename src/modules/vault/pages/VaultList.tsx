@@ -143,9 +143,16 @@ export default function VaultList() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-amber-500" /> Personal Vault
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold dark:text-white flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-amber-500" /> Personal Vault
+            </h1>
+            {!isLoading && items && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-sm whitespace-nowrap">
+                {items.length} {items.length === 1 ? 'item' : 'items'}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Capture ideas, aspirations, wishlist items, and personal notes. Promote any item to an active Action when ready.
           </p>
