@@ -432,60 +432,59 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     </div>
   );
 
-  const renderPagination = () => {
+  const renderThinPagination = () => {
     if (!data || data.totalPages <= 1) return null;
     return (
-      <div className="mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-2.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm shrink-0">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          Showing page <span className="font-semibold text-gray-700 dark:text-gray-200">{page + 1}</span> of{' '}
-          <span className="font-semibold text-gray-700 dark:text-gray-200">{data.totalPages}</span> ({data.totalElements} total{' '}
-          {recordType === 'COLLABORATOR' ? 'collaborators' : 'leads'})
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>Previous</span>
-          </button>
+      <div className="flex items-center gap-0.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md p-0.5 shadow-xs">
+        <button
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          disabled={page === 0}
+          className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+          title="Previous page"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
 
-          <div className="flex items-center gap-1 px-1">
-            {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
-              let pageNum = i;
-              if (data.totalPages > 5) {
-                if (page >= 3 && page <= data.totalPages - 3) {
-                  pageNum = page - 2 + i;
-                } else if (page > data.totalPages - 3) {
-                  pageNum = data.totalPages - 5 + i;
-                }
+        {/* Numbered buttons on sm+ */}
+        <div className="hidden sm:flex items-center gap-0.5">
+          {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
+            let pageNum = i;
+            if (data.totalPages > 5) {
+              if (page >= 3 && page <= data.totalPages - 3) {
+                pageNum = page - 2 + i;
+              } else if (page > data.totalPages - 3) {
+                pageNum = data.totalPages - 5 + i;
               }
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setPage(pageNum)}
-                  className={`min-w-[28px] h-7 text-xs font-medium rounded transition ${
-                    page === pageNum
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-600'
-                  }`}
-                >
-                  {pageNum + 1}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
-            disabled={page >= data.totalPages - 1}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            <span>Next</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+            }
+            return (
+              <button
+                key={pageNum}
+                onClick={() => setPage(pageNum)}
+                className={`min-w-[22px] h-6 px-1 text-[11px] font-semibold rounded transition cursor-pointer ${
+                  page === pageNum
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700'
+                }`}
+              >
+                {pageNum + 1}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Compact text on mobile */}
+        <span className="sm:hidden text-[11px] font-semibold px-1 text-gray-700 dark:text-gray-200 select-none">
+          {page + 1}/{data.totalPages}
+        </span>
+
+        <button
+          onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
+          disabled={page >= data.totalPages - 1}
+          className="p-1 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition cursor-pointer"
+          title="Next page"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     );
   };
@@ -510,7 +509,10 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Thin Top Pagination in Full Screen */}
+            {renderThinPagination()}
+
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <span>Per page:</span>
               <select
@@ -570,8 +572,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           )}
         </div>
 
-        {/* Pagination at bottom */}
-        {renderPagination()}
+
 
         {/* Floating Bulk Actions Bar */}
         <BulkActionsBar
@@ -868,12 +869,16 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {selectedIds.length > 0 && (
               <span className="font-semibold text-blue-600 dark:text-blue-400">
                 {selectedIds.length} of {data.content?.length || 0} selected
               </span>
             )}
+
+            {/* Thin Top Pagination */}
+            {renderThinPagination()}
+
             <div className="flex items-center gap-1.5">
               <span className="text-gray-500">Per page:</span>
               <select
@@ -911,7 +916,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="flex-1 overflow-y-auto pb-6">
         {isLoading ? (
           <div className="text-center py-4">{`Loading ${title.toLowerCase()}...`}</div>
         ) : data?.content && data.content.length > 0 ? (
@@ -1106,8 +1111,6 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {renderPagination()}
       </div>
 
       {/* Bulk Actions Floating Bar */}
