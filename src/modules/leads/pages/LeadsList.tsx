@@ -28,7 +28,13 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
   const parseUrlFilters = () => {
     const urlSearch = searchParams.get('q') || searchParams.get('search') || '';
-    const urlHasMobile = searchParams.get('hasMobile') === 'true' || searchParams.get('hasMobileNo') === 'true';
+    const rawMobile = searchParams.get('hasMobile') ?? searchParams.get('hasMobileNo');
+    let urlMobile: 'all' | 'has_mobile' | 'no_mobile' = 'all';
+    if (rawMobile === 'true') {
+      urlMobile = 'has_mobile';
+    } else if (rawMobile === 'false') {
+      urlMobile = 'no_mobile';
+    }
 
     let urlTagIds: number[] = [];
     const tIds = searchParams.get('tagIds');
@@ -50,7 +56,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
     return {
       search: urlSearch,
-      hasMobile: urlHasMobile,
+      mobile: urlMobile,
       tagIds: urlTagIds,
       categories: urlCatMap,
     };
@@ -61,7 +67,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const [searchTerm, setSearchTerm] = useState(initialFilters.search);
   const [debouncedSearch, setDebouncedSearch] = useState(initialFilters.search);
   const [activeFilterId, setActiveFilterId] = useState<string>(() => searchParams.get('viewId') || searchParams.get('filterId') || '');
-  const [hasMobileNo, setHasMobileNo] = useState(initialFilters.hasMobile);
+  const [mobileFilter, setMobileFilter] = useState<'all' | 'has_mobile' | 'no_mobile'>(initialFilters.mobile);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>(initialFilters.tagIds);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>(initialFilters.categories);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -212,7 +218,10 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     currentFilters.q = debouncedSearch;
     currentFilters.search = debouncedSearch;
   }
-  if (hasMobileNo && recordType !== 'COLLABORATOR') currentFilters.hasMobileNo = true;
+  if (recordType !== 'COLLABORATOR') {
+    if (mobileFilter === 'has_mobile') currentFilters.hasMobileNo = true;
+    else if (mobileFilter === 'no_mobile') currentFilters.hasMobileNo = false;
+  }
   
   // Pass all selected category values. The backend expects ?categoryId=1&categoryId=4
   const categoryIdsParam = Object.values(selectedCategoryIds).filter(Boolean);
@@ -284,13 +293,16 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   useEffect(() => {
     setSelectedIds([]);
     setPage(0);
-  }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
+  }, [debouncedSearch, mobileFilter, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
 
   // Generate shareable link representing the current filter combination
   const getShareableLink = () => {
     const params = new URLSearchParams();
     if (searchTerm.trim()) params.set('q', searchTerm.trim());
-    if (hasMobileNo && recordType !== 'COLLABORATOR') params.set('hasMobile', 'true');
+    if (recordType !== 'COLLABORATOR') {
+      if (mobileFilter === 'has_mobile') params.set('hasMobile', 'true');
+      else if (mobileFilter === 'no_mobile') params.set('hasMobile', 'false');
+    }
     if (selectedTagIds.length > 0) params.set('tagIds', selectedTagIds.join(','));
     Object.entries(selectedCategoryIds).forEach(([grpId, valId]) => {
       if (valId) params.set(`cat_${grpId}`, valId);
@@ -317,7 +329,10 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   useEffect(() => {
     const params = new URLSearchParams();
     if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
-    if (hasMobileNo && recordType !== 'COLLABORATOR') params.set('hasMobile', 'true');
+    if (recordType !== 'COLLABORATOR') {
+      if (mobileFilter === 'has_mobile') params.set('hasMobile', 'true');
+      else if (mobileFilter === 'no_mobile') params.set('hasMobile', 'false');
+    }
     if (selectedTagIds.length > 0) params.set('tagIds', selectedTagIds.join(','));
     Object.entries(selectedCategoryIds).forEach(([grpId, valId]) => {
       if (valId) params.set(`cat_${grpId}`, valId);
@@ -329,7 +344,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     if (window.location.pathname + window.location.search !== newPath) {
       window.history.replaceState(null, '', newPath);
     }
-  }, [debouncedSearch, hasMobileNo, selectedTagIds, selectedCategoryIds, activeFilterId, routePath, recordType]);
+  }, [debouncedSearch, mobileFilter, selectedTagIds, selectedCategoryIds, activeFilterId, routePath, recordType]);
 
   // Synchronize when URL searchParams changes from navigation (e.g. sidebar link clicked)
   useEffect(() => {
@@ -343,7 +358,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           setSearchTerm(matched.filters.search);
           setDebouncedSearch(matched.filters.search);
         }
-        if (matched.filters.hasMobileNo !== undefined) setHasMobileNo(Boolean(matched.filters.hasMobileNo));
+        if (matched.filters.hasMobileNo === true) setMobileFilter('has_mobile');
+        else if (matched.filters.hasMobileNo === false) setMobileFilter('no_mobile');
+        else setMobileFilter('all');
         if (Array.isArray(matched.filters.tagIds)) setSelectedTagIds(matched.filters.tagIds);
         if (matched.filters.categoryIds) setSelectedCategoryIds(matched.filters.categoryIds);
         setActiveFilterId(String(viewId));
@@ -353,7 +370,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
     setSearchTerm(parsed.search);
     setDebouncedSearch(parsed.search);
-    setHasMobileNo(parsed.hasMobile);
+    setMobileFilter(parsed.mobile);
     setSelectedTagIds(parsed.tagIds);
     setSelectedCategoryIds(parsed.categories);
     setActiveFilterId(viewId);
@@ -363,7 +380,8 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const openSaveModal = () => {
     const parts: string[] = [];
     if (searchTerm.trim()) parts.push(`"${searchTerm.trim()}"`);
-    if (hasMobileNo) parts.push('Mobile');
+    if (mobileFilter === 'has_mobile') parts.push('Has Mobile');
+    if (mobileFilter === 'no_mobile') parts.push('No Mobile');
     if (selectedTagIds.length > 0) parts.push(`${selectedTagIds.length} tags`);
     const defaultName = parts.length > 0 ? parts.join(' + ') : `${title} View`;
     setSaveViewName(defaultName);
@@ -377,12 +395,14 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
     const { relativePath } = getShareableLink();
 
+    const hasMobileNoVal = mobileFilter === 'has_mobile' ? true : mobileFilter === 'no_mobile' ? false : undefined;
+
     const newSaved = await saveFilterMutation.mutateAsync({
       name: saveViewName.trim(),
       filters: {
         path: relativePath,
         search: searchTerm.trim(),
-        hasMobileNo,
+        hasMobileNo: hasMobileNoVal,
         tagIds: selectedTagIds,
         categoryIds: selectedCategoryIds,
         recordType,
@@ -402,7 +422,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     if (!filterId) {
       setSearchTerm('');
       setDebouncedSearch('');
-      setHasMobileNo(false);
+      setMobileFilter('all');
       setSelectedTagIds([]);
       setSelectedCategoryIds({});
       return;
@@ -413,7 +433,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       const f = selected.filters;
       setSearchTerm(f.search || '');
       setDebouncedSearch(f.search || '');
-      setHasMobileNo(Boolean(f.hasMobileNo));
+      if (f.hasMobileNo === true) setMobileFilter('has_mobile');
+      else if (f.hasMobileNo === false) setMobileFilter('no_mobile');
+      else setMobileFilter('all');
       setSelectedTagIds(Array.isArray(f.tagIds) ? f.tagIds : []);
       setSelectedCategoryIds(f.categoryIds || {});
     }
@@ -421,7 +443,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
   const isAnyFilterActive = Boolean(
     searchTerm.trim() ||
-    hasMobileNo ||
+    mobileFilter !== 'all' ||
     selectedTagIds.length > 0 ||
     Object.values(selectedCategoryIds).some(Boolean) ||
     activeFilterId
@@ -430,7 +452,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const handleClearAllFilters = () => {
     setSearchTerm('');
     setDebouncedSearch('');
-    setHasMobileNo(false);
+    setMobileFilter('all');
     setSelectedTagIds([]);
     setSelectedCategoryIds({});
     setActiveFilterId('');
@@ -904,15 +926,46 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm">
         {recordType !== 'COLLABORATOR' && (
           <>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={hasMobileNo}
-                onChange={(e) => setHasMobileNo(e.target.checked)}
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              Has Mobile No
-            </label>
+            {/* 3-State Mobile Filter Segmented Control */}
+            <div className="flex items-center bg-gray-100 dark:bg-zinc-800/90 p-0.5 rounded-lg border border-gray-200 dark:border-zinc-700 text-xs">
+              <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 px-2 flex items-center gap-1 select-none">
+                <Phone className="w-3 h-3 text-gray-400" />
+                <span className="hidden sm:inline">Mobile:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileFilter('all')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer ${
+                  mobileFilter === 'all'
+                    ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 shadow-2xs font-semibold'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileFilter('has_mobile')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
+                  mobileFilter === 'has_mobile'
+                    ? 'bg-emerald-600 text-white shadow-2xs font-semibold'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                Has Mobile
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileFilter('no_mobile')}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition flex items-center gap-1 cursor-pointer ${
+                  mobileFilter === 'no_mobile'
+                    ? 'bg-rose-600 text-white shadow-2xs font-semibold'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400'
+                }`}
+              >
+                No Mobile
+              </button>
+            </div>
 
             <div className="h-4 w-px bg-gray-300 dark:bg-zinc-600 hidden sm:block"></div>
           </>
@@ -1070,7 +1123,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 <> of <strong className="text-gray-900 dark:text-gray-100">{data.totalElements}</strong></>
               )} {title.toLowerCase()}
             </span>
-            {(Boolean(debouncedSearch) || hasMobileNo || selectedTagIds.length > 0 || Object.values(selectedCategoryIds).some(Boolean)) && (
+            {(Boolean(debouncedSearch) || mobileFilter !== 'all' || selectedTagIds.length > 0 || Object.values(selectedCategoryIds).some(Boolean)) && (
               <span className="text-blue-600 dark:text-blue-400 font-medium">
                 (filtered)
               </span>
@@ -1392,9 +1445,14 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                       Search: "{searchTerm}"
                     </span>
                   )}
-                  {hasMobileNo && (
+                  {mobileFilter === 'has_mobile' && (
                     <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 text-[11px]">
                       Has Mobile No
+                    </span>
+                  )}
+                  {mobileFilter === 'no_mobile' && (
+                    <span className="px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300 text-[11px]">
+                      No Mobile No
                     </span>
                   )}
                   {selectedTagIds.length > 0 && (
@@ -1407,7 +1465,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                       Categories applied
                     </span>
                   )}
-                  {!searchTerm && !hasMobileNo && selectedTagIds.length === 0 && !Object.values(selectedCategoryIds).some(Boolean) && (
+                  {!searchTerm && mobileFilter === 'all' && selectedTagIds.length === 0 && !Object.values(selectedCategoryIds).some(Boolean) && (
                     <span className="text-gray-400 italic">All {title.toLowerCase()} (unfiltered)</span>
                   )}
                 </div>

@@ -126,9 +126,14 @@ export default function SavedFiltersPage() {
                         <Search className="w-2.5 h-2.5" /> "{search}"
                       </span>
                     )}
-                    {hasMobile && (
+                    {hasMobile === true && (
                       <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         Has Phone
+                      </span>
+                    )}
+                    {hasMobile === false && (
+                      <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                        No Phone
                       </span>
                     )}
                     {Array.isArray(tagIds) && tagIds.length > 0 && (
