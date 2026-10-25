@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2 } from 'lucide-react';
+import api from '../../../shared/api/client';
+import { exportLeadsToExcel } from '../utils/excelExport';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -91,6 +93,47 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isFullScreen]);
+
+  // Excel Export State & Handler
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadExcel = async () => {
+    if (!data || !data.totalElements || data.totalElements === 0) {
+      alert('No leads match the current filters to download.');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      let leadsToExport: Lead[] = [];
+
+      // If all filtered leads are already in data.content
+      if (data.totalElements <= (data.content?.length || 0)) {
+        leadsToExport = data.content;
+      } else {
+        // Fetch all filtered leads matching the active criteria
+        const exportFilters = {
+          ...currentFilters,
+          page: 0,
+          size: Math.min(data.totalElements, 5000),
+        };
+        const res = await api.get('/leads', { params: exportFilters });
+        leadsToExport = res.data?.content || data.content || [];
+      }
+
+      exportLeadsToExcel(leadsToExport, recordType);
+    } catch (err) {
+      console.error('Failed to export filtered leads to Excel:', err);
+      if (data?.content && data.content.length > 0) {
+        exportLeadsToExcel(data.content, recordType);
+      } else {
+        alert('Failed to download Excel. Please try again.');
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
 
   // Tag filter states
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -482,6 +525,26 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               </select>
             </div>
 
+            {/* Download Excel Button in Fullscreen */}
+            <button
+              onClick={handleDownloadExcel}
+              disabled={isExporting || !data || data.totalElements === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-40 cursor-pointer"
+              title={`Download all ${data?.totalElements ?? 0} filtered ${title.toLowerCase()} as Excel`}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Download Excel ({data?.totalElements ?? data?.content?.length ?? 0})</span>
+                </>
+              )}
+            </button>
+
             <button
               onClick={toggleFullScreen}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white dark:bg-zinc-100 dark:text-zinc-900 hover:bg-gray-800 dark:hover:bg-zinc-200 rounded-lg text-xs font-semibold shadow-sm transition cursor-pointer"
@@ -587,11 +650,26 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           {/* Full Screen Button */}
           <button
             onClick={toggleFullScreen}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-md shadow-sm text-xs font-semibold transition ml-1"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-zinc-800 border border-blue-200 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-md shadow-sm text-xs font-semibold transition ml-1 cursor-pointer"
             title="Full Screen (Table Only)"
           >
             <Maximize2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Full Screen</span>
+          </button>
+
+          {/* Download Filtered Excel Button in Top Toolbar */}
+          <button
+            onClick={handleDownloadExcel}
+            disabled={isExporting || !data || data.totalElements === 0}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-md shadow-sm text-xs font-semibold transition ml-1 disabled:opacity-40 cursor-pointer"
+            title={`Download all ${data?.totalElements ?? 0} filtered ${title.toLowerCase()} as Excel`}
+          >
+            {isExporting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+            ) : (
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            )}
+            <span className="hidden sm:inline">Excel</span>
           </button>
         </div>
       </div>
@@ -786,7 +864,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
             )}
             {data.totalPages > 1 && (
               <span className="text-gray-400">
-                �• Page {page + 1} of {data.totalPages}
+                • Page {page + 1} of {data.totalPages}
               </span>
             )}
           </div>
@@ -809,6 +887,26 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 <option value={200}>200</option>
               </select>
             </div>
+
+            {/* Download Filtered Excel Button directly above Table */}
+            <button
+              onClick={handleDownloadExcel}
+              disabled={isExporting || !data || data.totalElements === 0}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 shadow-sm transition disabled:opacity-40 cursor-pointer"
+              title={`Download all ${data?.totalElements ?? 0} filtered ${title.toLowerCase()} as Excel`}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Download Excel ({data?.totalElements ?? data?.content?.length ?? 0})</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}

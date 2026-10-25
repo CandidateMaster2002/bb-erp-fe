@@ -9,8 +9,10 @@ import {
   Download, 
   CheckSquare, 
   MessageSquare,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from 'lucide-react';
+import { exportLeadsToExcel } from '../utils/excelExport';
 import { format, addDays, nextMonday } from 'date-fns';
 import { 
   useCategories, 
@@ -342,8 +344,18 @@ export default function BulkActionsBar({
                   </button>
                   <hr className="border-zinc-700 my-1" />
                   <button
-                    onClick={handleExportCsv}
+                    onClick={() => {
+                      exportLeadsToExcel(selectedLeads, recordType);
+                      setIsCopyMenuOpen(false);
+                      showToast(`Exported ${count} ${recordType.toLowerCase()}s to Excel!`);
+                    }}
                     className="w-full text-left px-3 py-2 hover:bg-zinc-700 flex items-center gap-2 text-emerald-400 font-medium"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" /> Download Excel (.xlsx)
+                  </button>
+                  <button
+                    onClick={handleExportCsv}
+                    className="w-full text-left px-3 py-2 hover:bg-zinc-700 flex items-center gap-2 text-gray-300 hover:text-white"
                   >
                     <Download className="w-3.5 h-3.5" /> Download CSV
                   </button>
