@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Search, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2, Bookmark } from 'lucide-react';
 import api from '../../../shared/api/client';
 import { exportLeadsToExcel } from '../utils/excelExport';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
 import ScheduleFollowUpModal from '../components/ScheduleFollowUpModal';
 import EditLeadDetailsModal from '../components/EditLeadDetailsModal';
@@ -21,6 +21,53 @@ const LinkedinIcon = ({ className }: { className?: string }) => (
 );
 
 export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD' | 'COLLABORATOR' }) {
+  const routePath = recordType === 'COLLABORATOR' ? 'collaborators' : 'leads';
+  const title = recordType === 'COLLABORATOR' ? 'Collaborators' : 'Leads';
+
+  const [searchParams] = useSearchParams();
+
+  const parseUrlFilters = () => {
+    const urlSearch = searchParams.get('q') || searchParams.get('search') || '';
+    const urlHasMobile = searchParams.get('hasMobile') === 'true' || searchParams.get('hasMobileNo') === 'true';
+
+    let urlTagIds: number[] = [];
+    const tIds = searchParams.get('tagIds');
+    if (tIds) {
+      urlTagIds = tIds.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+    } else {
+      const single = searchParams.get('tagId');
+      if (single && !isNaN(Number(single))) {
+        urlTagIds = [Number(single)];
+      }
+    }
+
+    const urlCatMap: Record<string, string> = {};
+    searchParams.forEach((val, key) => {
+      if (key.startsWith('cat_')) {
+        urlCatMap[key.replace('cat_', '')] = val;
+      }
+    });
+
+    return {
+      search: urlSearch,
+      hasMobile: urlHasMobile,
+      tagIds: urlTagIds,
+      categories: urlCatMap,
+    };
+  };
+
+  const initialFilters = parseUrlFilters();
+
+  const [searchTerm, setSearchTerm] = useState(initialFilters.search);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialFilters.search);
+  const [activeFilterId, setActiveFilterId] = useState<string>(() => searchParams.get('viewId') || searchParams.get('filterId') || '');
+  const [hasMobileNo, setHasMobileNo] = useState(initialFilters.hasMobile);
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>(initialFilters.tagIds);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>(initialFilters.categories);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveViewName, setSaveViewName] = useState('');
+
   const updateLead = useUpdateLeadDetail();
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [editingContactValue, setEditingContactValue] = useState('');
@@ -44,9 +91,6 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
   const deleteLead = useDeleteLead();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [activeFilterId, setActiveFilterId] = useState<string>('');
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
@@ -56,10 +100,6 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-  // New filter states
-  const [hasMobileNo, setHasMobileNo] = useState(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
 
   // Pagination states
   const [page, setPage] = useState(0);
@@ -136,7 +176,6 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
 
   // Tag filter states
-  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const { data: availableTags } = useTags();
@@ -247,11 +286,155 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     setPage(0);
   }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
 
-  const handleSaveFilter = () => {
-    const name = prompt('Enter a name for this filter:');
-    if (name) {
-      saveFilterMutation.mutate({ name, filters: { search: searchTerm } });
+  // Generate shareable link representing the current filter combination
+  const getShareableLink = () => {
+    const params = new URLSearchParams();
+    if (searchTerm.trim()) params.set('q', searchTerm.trim());
+    if (hasMobileNo && recordType !== 'COLLABORATOR') params.set('hasMobile', 'true');
+    if (selectedTagIds.length > 0) params.set('tagIds', selectedTagIds.join(','));
+    Object.entries(selectedCategoryIds).forEach(([grpId, valId]) => {
+      if (valId) params.set(`cat_${grpId}`, valId);
+    });
+    if (activeFilterId) params.set('viewId', activeFilterId);
+
+    const queryString = params.toString();
+    const relativePath = `/${routePath}${queryString ? '?' + queryString : ''}`;
+    return {
+      relativePath,
+      fullUrl: `${window.location.origin}${relativePath}`,
+    };
+  };
+
+  // 1-Click Copy Link to Clipboard
+  const handleCopyLink = () => {
+    const { fullUrl } = getShareableLink();
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // Seamlessly keep the browser URL bar up-to-date with active filters
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch.trim()) params.set('q', debouncedSearch.trim());
+    if (hasMobileNo && recordType !== 'COLLABORATOR') params.set('hasMobile', 'true');
+    if (selectedTagIds.length > 0) params.set('tagIds', selectedTagIds.join(','));
+    Object.entries(selectedCategoryIds).forEach(([grpId, valId]) => {
+      if (valId) params.set(`cat_${grpId}`, valId);
+    });
+    if (activeFilterId) params.set('viewId', activeFilterId);
+
+    const queryString = params.toString();
+    const newPath = `/${routePath}${queryString ? '?' + queryString : ''}`;
+    if (window.location.pathname + window.location.search !== newPath) {
+      window.history.replaceState(null, '', newPath);
     }
+  }, [debouncedSearch, hasMobileNo, selectedTagIds, selectedCategoryIds, activeFilterId, routePath, recordType]);
+
+  // Synchronize when URL searchParams changes from navigation (e.g. sidebar link clicked)
+  useEffect(() => {
+    const parsed = parseUrlFilters();
+    const viewId = searchParams.get('viewId') || searchParams.get('filterId') || '';
+
+    if (viewId && filtersData && filtersData.length > 0) {
+      const matched = filtersData.find(f => String(f.id) === String(viewId));
+      if (matched?.filters) {
+        if (matched.filters.search !== undefined) {
+          setSearchTerm(matched.filters.search);
+          setDebouncedSearch(matched.filters.search);
+        }
+        if (matched.filters.hasMobileNo !== undefined) setHasMobileNo(Boolean(matched.filters.hasMobileNo));
+        if (Array.isArray(matched.filters.tagIds)) setSelectedTagIds(matched.filters.tagIds);
+        if (matched.filters.categoryIds) setSelectedCategoryIds(matched.filters.categoryIds);
+        setActiveFilterId(String(viewId));
+        return;
+      }
+    }
+
+    setSearchTerm(parsed.search);
+    setDebouncedSearch(parsed.search);
+    setHasMobileNo(parsed.hasMobile);
+    setSelectedTagIds(parsed.tagIds);
+    setSelectedCategoryIds(parsed.categories);
+    setActiveFilterId(viewId);
+  }, [searchParams.toString()]);
+
+  // Open Save View Dialog
+  const openSaveModal = () => {
+    const parts: string[] = [];
+    if (searchTerm.trim()) parts.push(`"${searchTerm.trim()}"`);
+    if (hasMobileNo) parts.push('Mobile');
+    if (selectedTagIds.length > 0) parts.push(`${selectedTagIds.length} tags`);
+    const defaultName = parts.length > 0 ? parts.join(' + ') : `${title} View`;
+    setSaveViewName(defaultName);
+    setIsSaveModalOpen(true);
+  };
+
+  // Confirm Save View
+  const handleConfirmSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!saveViewName.trim()) return;
+
+    const { relativePath } = getShareableLink();
+
+    const newSaved = await saveFilterMutation.mutateAsync({
+      name: saveViewName.trim(),
+      filters: {
+        path: relativePath,
+        search: searchTerm.trim(),
+        hasMobileNo,
+        tagIds: selectedTagIds,
+        categoryIds: selectedCategoryIds,
+        recordType,
+      }
+    });
+
+    if (newSaved?.id) {
+      setActiveFilterId(String(newSaved.id));
+    }
+    setIsSaveModalOpen(false);
+    setSaveViewName('');
+  };
+
+  // Handle selecting a saved filter from the dropdown
+  const handleSelectSavedFilter = (filterId: string) => {
+    setActiveFilterId(filterId);
+    if (!filterId) {
+      setSearchTerm('');
+      setDebouncedSearch('');
+      setHasMobileNo(false);
+      setSelectedTagIds([]);
+      setSelectedCategoryIds({});
+      return;
+    }
+
+    const selected = filtersData?.find(f => String(f.id) === filterId);
+    if (selected?.filters) {
+      const f = selected.filters;
+      setSearchTerm(f.search || '');
+      setDebouncedSearch(f.search || '');
+      setHasMobileNo(Boolean(f.hasMobileNo));
+      setSelectedTagIds(Array.isArray(f.tagIds) ? f.tagIds : []);
+      setSelectedCategoryIds(f.categoryIds || {});
+    }
+  };
+
+  const isAnyFilterActive = Boolean(
+    searchTerm.trim() ||
+    hasMobileNo ||
+    selectedTagIds.length > 0 ||
+    Object.values(selectedCategoryIds).some(Boolean) ||
+    activeFilterId
+  );
+
+  const handleClearAllFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
+    setHasMobileNo(false);
+    setSelectedTagIds([]);
+    setSelectedCategoryIds({});
+    setActiveFilterId('');
+    window.history.replaceState(null, '', `/${routePath}`);
   };
 
   const handleDeleteLead = async (leadId: string | number) => {
@@ -259,9 +442,6 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       await deleteLead.mutateAsync(leadId);
     }
   };
-
-  const routePath = recordType === 'COLLABORATOR' ? 'collaborators' : 'leads';
-  const title = recordType === 'COLLABORATOR' ? 'Collaborators' : 'Leads';
 
   const renderTableView = () => (
     <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-auto h-full">
@@ -611,26 +791,58 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           {Array.isArray(filtersData) && filtersData.length > 0 && (
             <select 
               value={activeFilterId}
-              onChange={(e) => setActiveFilterId(e.target.value)}
-              className="text-sm p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200"
+              onChange={(e) => handleSelectSavedFilter(e.target.value)}
+              className="text-xs p-1.5 border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-md dark:text-gray-200 focus:outline-none"
             >
-              <option value="">Saved Filters...</option>
+              <option value="">Saved Views...</option>
               {filtersData.map(f => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>
           )}
           {activeFilterId && (
-            <button onClick={() => { deleteFilterMutation.mutate(activeFilterId); setActiveFilterId(''); }} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+            <button 
+              onClick={() => { deleteFilterMutation.mutate(activeFilterId); setActiveFilterId(''); }} 
+              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
+              title="Delete this saved view"
+            >
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          <button onClick={handleSaveFilter} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800" title="Save this filter">
-            <Save className="w-4 h-4" />
+          <button 
+            onClick={openSaveModal} 
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800 transition cursor-pointer" 
+            title="Save current filters as a view in left panel"
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Save View</span>
           </button>
-          <button className="p-1.5 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-md shadow-sm">
-            <Filter className="w-4 h-4 dark:text-gray-300" />
+          <button 
+            onClick={handleCopyLink} 
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 border border-gray-200 dark:border-zinc-700 rounded-md text-gray-700 dark:text-gray-200 transition cursor-pointer shadow-2xs" 
+            title="Copy direct shareable link for this filtered view"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Link2 className="w-3.5 h-3.5 text-gray-500" />
+                <span className="hidden sm:inline">Copy Link</span>
+              </>
+            )}
           </button>
+          {isAnyFilterActive && (
+            <button
+              onClick={handleClearAllFilters}
+              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded transition cursor-pointer"
+              title="Reset all filters"
+            >
+              Clear
+            </button>
+          )}
           <div className="flex bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-md overflow-hidden shadow-sm ml-2">
             <button 
               onClick={() => setViewMode('table')} 
@@ -1130,6 +1342,107 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         onClose={() => setFollowUpLeadId(null)} 
         leadId={followUpLeadId} 
       />
+
+      {/* Save Filtered View Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-gray-200 dark:border-zinc-800 w-full max-w-md p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Bookmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Save Filtered View</h3>
+                  <p className="text-xs text-gray-500">Save for 1-click access in your left panel & get a shareable link.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSaveModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSave} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  View Name
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  required
+                  placeholder="e.g. Founders with Phone, High Intent Leads"
+                  value={saveViewName}
+                  onChange={(e) => setSaveViewName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Filters Preview */}
+              <div className="p-3 bg-gray-50 dark:bg-zinc-800/60 rounded-lg border border-gray-200 dark:border-zinc-700/60 text-xs space-y-1.5">
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-[10px] block">
+                  Active Filters being saved:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {searchTerm && (
+                    <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-[11px]">
+                      Search: "{searchTerm}"
+                    </span>
+                  )}
+                  {hasMobileNo && (
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 text-[11px]">
+                      Has Mobile No
+                    </span>
+                  )}
+                  {selectedTagIds.length > 0 && (
+                    <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 text-[11px]">
+                      {selectedTagIds.length} tag(s)
+                    </span>
+                  )}
+                  {Object.values(selectedCategoryIds).some(Boolean) && (
+                    <span className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-[11px]">
+                      Categories applied
+                    </span>
+                  )}
+                  {!searchTerm && !hasMobileNo && selectedTagIds.length === 0 && !Object.values(selectedCategoryIds).some(Boolean) && (
+                    <span className="text-gray-400 italic">All {title.toLowerCase()} (unfiltered)</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSaveModalOpen(false)}
+                  className="px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveFilterMutation.isPending || !saveViewName.trim()}
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
+                >
+                  {saveFilterMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="w-3.5 h-3.5" />
+                      <span>Save View</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

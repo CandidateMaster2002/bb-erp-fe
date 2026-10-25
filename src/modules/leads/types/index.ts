@@ -87,9 +87,18 @@ export interface FollowUp {
 }
 
 export interface SavedFilter {
-  id: string;
+  id: string | number;
   name: string;
-  filters: any; // The payload of filters
+  filterJson?: string;
+  filters?: {
+    path?: string;
+    recordType?: 'LEAD' | 'COLLABORATOR';
+    search?: string;
+    hasMobileNo?: boolean;
+    categoryIds?: Record<string, string>;
+    tagIds?: number[];
+  };
+  createdAt?: string;
 }
 
 export interface Interaction {

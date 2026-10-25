@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Navigate, useLocation, Link } from 'react-router-dom';
 import { 
   Users, 
   Settings, 
@@ -13,12 +13,14 @@ import {
   Download, 
   CheckCircle2, 
   MoreHorizontal,
-  RefreshCw
+  RefreshCw,
+  Bookmark
 } from 'lucide-react';
 import { cn } from '../shared/utils/cn';
 import QuickAddSheet from '../modules/leads/components/QuickAddSheet';
 import RemindersWidget from '../modules/leads/components/RemindersWidget';
 import { usePwa } from '../shared/pwa/usePwa';
+import { useSavedFilters } from '../modules/leads/api/filters';
 
 // All modules for desktop sidebar and mobile drawer
 const ALL_MODULES = [
@@ -26,6 +28,7 @@ const ALL_MODULES = [
   { name: 'Leads CRM', path: '/leads', icon: Users },
   { name: 'Collaborators', path: '/collaborators', icon: Briefcase },
   { name: 'Staffing / ATS', path: '/staffing', icon: Briefcase },
+  { name: 'Saved Filters', path: '/saved-filters', icon: Bookmark },
   { name: 'Personal Vault', path: '/vault', icon: Sparkles },
   { name: 'Global Links', path: '/links', icon: Link2 },
   { name: 'Settings', path: '/settings', icon: Settings },
@@ -68,6 +71,7 @@ export default function AppLayout() {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isInstallable, isInstalled, hasUpdate, installApp, updateApp } = usePwa();
+  const { data: savedFilters = [] } = useSavedFilters();
 
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -79,7 +83,7 @@ export default function AppLayout() {
   };
 
   // Check if current route is one of the secondary items in the "More" menu
-  const isSecondaryActive = ['/collaborators', '/links', '/settings', '/pipeline', '/reports'].some(
+  const isSecondaryActive = ['/collaborators', '/links', '/settings', '/pipeline', '/reports', '/saved-filters'].some(
     p => location.pathname === p || location.pathname.startsWith(`${p}/`)
   );
 
@@ -135,6 +139,56 @@ export default function AppLayout() {
               <span>{item.name}</span>
             </NavLink>
           ))}
+
+          {/* Saved Views in Left Sidebar */}
+          {savedFilters && savedFilters.length > 0 && (
+            <div className="pt-3 mt-3 border-t border-gray-200 dark:border-zinc-800">
+              <div className="flex items-center justify-between px-3 py-1 mb-1">
+                <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Bookmark className="w-3 h-3 text-blue-500" />
+                  <span>Saved Views</span>
+                </span>
+                <Link 
+                  to="/saved-filters" 
+                  className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                >
+                  View All
+                </Link>
+              </div>
+              <div className="space-y-0.5">
+                {savedFilters.slice(0, 8).map((item) => {
+                  const targetPath = item.filters?.path || `/leads?viewId=${item.id}`;
+                  const isActive = (location.pathname + location.search) === targetPath;
+                  return (
+                    <Link
+                      key={item.id}
+                      to={targetPath}
+                      className={cn(
+                        "flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors group",
+                        isActive 
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium" 
+                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-zinc-800 hover:text-gray-900 dark:hover:text-gray-200"
+                      )}
+                      title={item.name}
+                    >
+                      <span className="truncate">{item.name}</span>
+                      <span className="opacity-0 group-hover:opacity-100 text-[10px] text-gray-400 transition-opacity">
+                        ↗
+                      </span>
+                    </Link>
+                  );
+                })}
+                {savedFilters.length > 8 && (
+                  <Link
+                    to="/saved-filters"
+                    className="block px-3 py-1 text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    +{savedFilters.length - 8} more views...
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Desktop PWA Install Prompt */}
@@ -310,6 +364,41 @@ export default function AppLayout() {
                   <span>{item.name}</span>
                 </NavLink>
               ))}
+
+              {/* Saved Views in Mobile Drawer */}
+              {savedFilters && savedFilters.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-gray-200 dark:border-zinc-800">
+                  <div className="flex items-center justify-between px-3 py-1 mb-1">
+                    <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Bookmark className="w-3 h-3 text-blue-500" />
+                      <span>Saved Views</span>
+                    </span>
+                    <Link 
+                      to="/saved-filters" 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    >
+                      View All
+                    </Link>
+                  </div>
+                  <div className="space-y-0.5">
+                    {savedFilters.slice(0, 8).map((item) => {
+                      const targetPath = item.filters?.path || `/leads?viewId=${item.id}`;
+                      return (
+                        <Link
+                          key={item.id}
+                          to={targetPath}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center justify-between px-3 py-2 rounded-lg text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-zinc-800 transition"
+                        >
+                          <span className="truncate">{item.name}</span>
+                          <span className="text-[10px] text-gray-400">↗</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Install PWA Prompt inside Drawer */}
               {isInstallable && (
