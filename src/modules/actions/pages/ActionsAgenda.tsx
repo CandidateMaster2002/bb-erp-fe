@@ -8,7 +8,7 @@ import {
   useUpdateLeadLog,
   useLeadDetail
 } from '../../leads/api/queries';
-import { CheckCircle2, XCircle, User, Clock, Phone } from 'lucide-react';
+import { CheckCircle2, XCircle, User, Clock, Phone, Copy, Check } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
 import TasksView from '../components/TasksView';
@@ -56,6 +56,15 @@ function LeadActionCard({
   const actionLinkedin = action.linkedinUrl || leadData?.linkedinUrl;
   const actionPhone = action.mobileNumber || leadData?.mobileNumber;
 
+  const [copiedPhone, setCopiedPhone] = useState(false);
+  const handleCopyPhone = (e: React.MouseEvent, phone: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(true);
+    setTimeout(() => setCopiedPhone(false), 1500);
+  };
+
   const actionDate = action.nextActionDate ? new Date(action.nextActionDate) : null;
   const isOverdue = actionDate && isBefore(actionDate, now);
 
@@ -80,15 +89,29 @@ function LeadActionCard({
             )}
 
             {actionPhone && (
-              <a
-                href={`tel:${actionPhone}`}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 dark:bg-zinc-700/60 px-2 py-0.5 rounded border border-gray-200 dark:border-zinc-700 transition"
-                title="Call Mobile"
-              >
-                <Phone className="w-3 h-3 text-gray-500 dark:text-gray-400" />
-                <span>{actionPhone}</span>
-              </a>
+              <div className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700/60 px-2 py-0.5 rounded border border-gray-200 dark:border-zinc-700">
+                <a
+                  href={`tel:${actionPhone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400 transition"
+                  title="Call Mobile"
+                >
+                  <Phone className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                  <span>{actionPhone}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => handleCopyPhone(e, actionPhone)}
+                  className="p-0.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded transition"
+                  title="Copy mobile number"
+                >
+                  {copiedPhone ? (
+                    <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
             )}
 
             {actionDate && (

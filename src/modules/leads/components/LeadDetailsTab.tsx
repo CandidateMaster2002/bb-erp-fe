@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useUpdateLeadDetail } from '../api/queries';
 import type { Lead, Education } from '../types';
-import { Pencil, Check, X, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Check, X, Plus, Trash2, Copy } from 'lucide-react';
 
 export default function LeadDetailsTab({ lead }: { lead: Lead }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Lead>>({});
   const updateMutation = useUpdateLeadDetail();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(prev => prev === field ? null : prev), 1500);
+  };
 
   useEffect(() => {
     if (lead) {
@@ -81,7 +88,26 @@ export default function LeadDetailsTab({ lead }: { lead: Lead }) {
           <div className="p-5 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-200 dark:border-zinc-700 space-y-4">
             <h3 className="font-semibold text-gray-900 dark:text-white border-b border-gray-100 dark:border-zinc-700 pb-2">Personal Information</h3>
             <div><span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">Full Name</span> <p className="dark:text-gray-200 font-medium">{lead.fullName}</p></div>
-            <div><span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">Phone</span> <p className="dark:text-gray-200">{lead.mobileNumber || 'N/A'}</p></div>
+            <div>
+              <span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">Phone</span>
+              <div className="flex items-center gap-2">
+                <p className="dark:text-gray-200">{lead.mobileNumber || 'N/A'}</p>
+                {lead.mobileNumber && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(lead.mobileNumber!, 'phone')}
+                    className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                    title="Copy mobile number"
+                  >
+                    {copiedField === 'phone' ? (
+                      <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
             <div><span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">Personal Email</span> <p className="dark:text-gray-200">{lead.personalEmail || 'N/A'}</p></div>
             <div><span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">Location (Raw)</span> <p className="dark:text-gray-200">{lead.location || 'N/A'}</p></div>
             <div><span className="text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider block">City / State / Country</span> 

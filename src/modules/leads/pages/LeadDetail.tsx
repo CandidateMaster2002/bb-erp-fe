@@ -5,7 +5,7 @@ import {
   useCategories, 
   useUpdateLeadCategories 
 } from '../api/queries';
-import { Phone, MoreVertical, ArrowLeft, Link2 } from 'lucide-react';
+import { Phone, MoreVertical, ArrowLeft, Link2, Copy, Check } from 'lucide-react';
 import LogInteractionSheet from '../components/LogInteractionSheet';
 import LeadActivityLog from '../components/LeadActivityLog';
 import LeadDetailsTab from '../components/LeadDetailsTab';
@@ -21,6 +21,13 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
   const [activeTab, setActiveTab] = useState<'timeline' | 'details' | 'links'>('timeline');
   const [logSheetOpen, setLogSheetOpen] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [isPhoneCopied, setIsPhoneCopied] = useState(false);
+
+  const handleCopyPhone = (phone: string) => {
+    navigator.clipboard.writeText(phone);
+    setIsPhoneCopied(true);
+    setTimeout(() => setIsPhoneCopied(false), 1500);
+  };
 
   // Keep local state in sync with server data initially
   useEffect(() => {
@@ -79,9 +86,21 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
               {lead.jobTitle && lead.company ? `${lead.jobTitle} at ${lead.company}` : lead.jobTitle || lead.company || ''}
             </p>
             {lead.mobileNumber && (
-              <div className="flex items-center gap-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1.5 mt-1 text-sm text-gray-500 dark:text-gray-400">
                 <Phone className="w-4 h-4" />
                 <span>{lead.mobileNumber}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyPhone(lead.mobileNumber!)}
+                  className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                  title="Copy mobile number"
+                >
+                  {isPhoneCopied ? (
+                    <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
               </div>
             )}
           </div>
