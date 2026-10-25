@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -48,6 +48,19 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   // New filter states
   const [hasMobileNo, setHasMobileNo] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
+
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(() => {
+    const saved = localStorage.getItem('leads_page_size');
+    return saved ? Number(saved) : 50;
+  });
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(0);
+    localStorage.setItem('leads_page_size', String(newSize));
+  };
 
   // Tag filter states
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -125,6 +138,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     }
   }
 
+  currentFilters.page = page;
+  currentFilters.size = pageSize;
+
   const { data, isLoading } = useLeadsList(currentFilters);
 
   // Selection helpers
@@ -155,6 +171,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   // Reset selection when search / filter changes
   useEffect(() => {
     setSelectedIds([]);
+    setPage(0);
   }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
 
   const handleSaveFilter = () => {
@@ -403,11 +420,11 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
       {/* Results Count & Status Bar */}
       {!isLoading && data && (
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2.5 px-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400 mb-2.5 px-1">
           <div className="flex items-center gap-2">
             <span>
               Showing <strong className="text-gray-900 dark:text-gray-100">{data.content?.length || 0}</strong>
-              {data.totalElements !== undefined && data.totalElements !== (data.content?.length || 0) && (
+              {data.totalElements !== undefined && (
                 <> of <strong className="text-gray-900 dark:text-gray-100">{data.totalElements}</strong></>
               )} {title.toLowerCase()}
             </span>
@@ -416,12 +433,32 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 (filtered)
               </span>
             )}
+            {data.totalPages > 1 && (
+              <span className="text-gray-400">
+                �• Page {page + 1} of {data.totalPages}
+              </span>
+            )}
           </div>
-          {selectedIds.length > 0 && (
-            <span className="font-semibold text-blue-600 dark:text-blue-400">
-              {selectedIds.length} of {data.content?.length || 0} selected
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {selectedIds.length > 0 && (
+              <span className="font-semibold text-blue-600 dark:text-blue-400">
+                {selectedIds.length} of {data.content?.length || 0} selected
+              </span>
+            )}
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-500">Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="px-2 py-0.5 text-xs bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </div>
+          </div>
         </div>
       )}
 
@@ -748,6 +785,62 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         ) : (
           <div className="text-center py-10 text-gray-500 dark:text-gray-400">
             {`No ${title.toLowerCase()} found. Tap + to add one.`}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {data && data.totalPages > 1 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-3 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-sm">
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Showing page <span className="font-semibold text-gray-700 dark:text-gray-200">{page + 1}</span> of{' '}
+              <span className="font-semibold text-gray-700 dark:text-gray-200">{data.totalPages}</span> ({data.totalElements} total{' '}
+              {recordType === 'COLLABORATOR' ? 'collaborators' : 'leads'})
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
+                  let pageNum = i;
+                  if (data.totalPages > 5) {
+                    if (page >= 3 && page <= data.totalPages - 3) {
+                      pageNum = page - 2 + i;
+                    } else if (page > data.totalPages - 3) {
+                      pageNum = data.totalPages - 5 + i;
+                    }
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`min-w-[28px] h-7 text-xs font-medium rounded transition ${
+                        page === pageNum
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-zinc-600'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setPage((p) => Math.min(data.totalPages - 1, p + 1))}
+                disabled={page >= data.totalPages - 1}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
