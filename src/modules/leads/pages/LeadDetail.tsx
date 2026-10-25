@@ -94,6 +94,24 @@ export default function LeadDetail({ recordType = 'LEAD' }: { recordType?: 'LEAD
         </div>
 
         <div className="px-4 pb-4 space-y-3">
+          {/* Tags */}
+          {lead.tags && Array.isArray(lead.tags) && lead.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Tags:</span>
+              {lead.tags.map((tagItem, idx) => {
+                const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
+                return (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                  >
+                    #{tagName}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 items-center">
             {Array.isArray(categoryGroups) && categoryGroups.map(group => {
               const groupValueIds = group.values?.map(v => Number(v.id)) || [];

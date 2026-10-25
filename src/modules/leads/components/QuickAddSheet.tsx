@@ -3,8 +3,8 @@ import { Drawer } from 'vaul';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAddLead, useCategories } from '../api/queries';
-import { Plus, X } from 'lucide-react';
+import { useAddLead, useCategories, useTags } from '../api/queries';
+import { Plus, X, Tag } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 const addLeadSchema = z.object({
@@ -38,29 +38,42 @@ export default function QuickAddSheet() {
 
   const addLead = useAddLead();
   const { data: categoryGroups } = useCategories(recordType);
+  const { data: availableTags } = useTags();
 
-  // Handle Category Defaulting Rule
+  // Tags state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState('');
+
+  // Handle Category & Tag Defaulting Rule
   useEffect(() => {
     if (open) {
       reset(); // Reset form fields
       setDuplicateError(null);
-      
-      // Apply defaults for categories
-      if (Array.isArray(categoryGroups)) {
-        const defaultIds: number[] = [];
-        const campaignGroup = categoryGroups.find(g => g.name.toLowerCase() === 'campaign');
-        if (campaignGroup) {
-          const newCat = campaignGroup.values.find(v => v.name.toLowerCase() === 'new');
-          if (newCat) {
-            defaultIds.push(Number(newCat.id));
-          }
-        }
-        setSelectedCategoryIds(defaultIds);
-      } else {
-        setSelectedCategoryIds([]);
-      }
+      setSelectedTags([]);
+      setNewTagInput('');
+      setSelectedCategoryIds([]);
     }
-  }, [open, categoryGroups, reset]);
+  }, [open, reset]);
+
+  const handleAddTag = (tagToAdd: string) => {
+    const trimmed = tagToAdd.trim().replace(/^#+/, '');
+    if (!trimmed) return;
+    if (!selectedTags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+      setSelectedTags(prev => [...prev, trimmed]);
+    }
+    setNewTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setSelectedTags(prev => prev.filter(t => t.toLowerCase() !== tagToRemove.toLowerCase()));
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      handleAddTag(newTagInput);
+    }
+  };
 
   const toggleCategory = (group: any, id: number) => {
     setSelectedCategoryIds(prev => {
@@ -74,11 +87,22 @@ export default function QuickAddSheet() {
   const onSubmit = async (data: AddLeadForm) => {
     setDuplicateError(null);
     try {
-      const payload = {
+      const payload: any = {
         ...data,
         recordType,
         categoryIds: selectedCategoryIds
       };
+
+      if (selectedTags.length > 0) {
+        payload.tagNames = selectedTags;
+        const matchingIds = availableTags
+          ?.filter(t => selectedTags.some(st => st.toLowerCase() === t.name.toLowerCase()))
+          .map(t => t.id) || [];
+        if (matchingIds.length > 0) {
+          payload.tagIds = matchingIds;
+        }
+      }
+
       await addLead.mutateAsync(payload);
       setOpen(false);
     } catch (error: any) {
@@ -184,10 +208,92 @@ export default function QuickAddSheet() {
 
               {/* Categorization & Notes */}
               <div className="space-y-4 pt-2">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-zinc-800 pb-2">Categorization & Notes</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-zinc-800 pb-2">Tags & Categorization</h3>
                 
+                {/* Tags Section */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-blue-500" />
+                    <span>Tags</span>
+                    <span className="text-[11px] font-normal text-gray-400 lowercase">(e.g. #Founder, #ISM Alumni)</span>
+                  </label>
+
+                  {/* Selected Active Tags */}
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {selectedTags.map(tag => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        >
+                          #{tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="hover:text-blue-950 dark:hover:text-white"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Tag Input */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-400 text-sm">#</span>
+                      <input
+                        type="text"
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        placeholder="Add tag (type and hit Enter or comma)..."
+                        className="w-full pl-6 pr-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-zinc-700 bg-transparent dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddTag(newTagInput)}
+                      disabled={!newTagInput.trim()}
+                      className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 disabled:opacity-40 transition"
+                    >
+                      Add Tag
+                    </button>
+                  </div>
+
+                  {/* Existing Tags Suggestions */}
+                  {availableTags && availableTags.length > 0 && (
+                    <div className="pt-1">
+                      <div className="text-[11px] text-gray-400 mb-1">Click to select existing tags:</div>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {availableTags.map(tag => {
+                          const isSelected = selectedTags.some(t => t.toLowerCase() === tag.name.toLowerCase());
+                          return (
+                            <button
+                              key={tag.id}
+                              type="button"
+                              onClick={() => isSelected ? handleRemoveTag(tag.name) : handleAddTag(tag.name)}
+                              className={`px-2.5 py-0.5 text-xs font-medium rounded-full border transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700 dark:hover:bg-zinc-700'
+                              }`}
+                            >
+                              #{tag.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Other Categories (excluding campaign) */}
                 <div className="space-y-4">
-                  {Array.isArray(categoryGroups) && categoryGroups.map(group => (
+                  {Array.isArray(categoryGroups) && categoryGroups
+                    .filter(group => !group.name.toLowerCase().includes('campaign'))
+                    .map(group => (
                     <div key={group.id} className="space-y-2">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">{group.name}</label>
                       <div className="flex flex-wrap gap-2">

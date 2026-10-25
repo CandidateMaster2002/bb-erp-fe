@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList, useCategories, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
+import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X } from 'lucide-react';
+import { Search, Filter, Save, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import QuickUpdateModal from '../components/QuickUpdateModal';
@@ -49,6 +49,26 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const [hasMobileNo, setHasMobileNo] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<Record<string, string>>({});
 
+  // Tag filter states
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const { data: availableTags } = useTags();
+
+  const toggleTag = (tagId: number) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) ? prev.filter(id => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const clearAllTags = () => {
+    setSelectedTagIds([]);
+  };
+
+  const filteredAvailableTags = (availableTags || []).filter(t => 
+    t.name.toLowerCase().includes(tagSearchQuery.toLowerCase().trim())
+  );
+
   // Fetch filter options
   const { data: categories } = useCategories(recordType);
   
@@ -75,6 +95,13 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     currentFilters.categoryId = categoryIdsParam;
   }
   
+  // Tag filter param: Single tag ?tagId=1, Multiple tags ?tagIds=1,2
+  if (selectedTagIds.length === 1) {
+    currentFilters.tagId = selectedTagIds[0];
+  } else if (selectedTagIds.length > 1) {
+    currentFilters.tagIds = selectedTagIds.join(',');
+  }
+
   if (activeFilterId) currentFilters.filterId = activeFilterId;
 
   // Global preference: Hide dead leads unless explicitly filtering by it
@@ -128,7 +155,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   // Reset selection when search / filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), activeFilterId]);
+  }, [debouncedSearch, hasMobileNo, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
 
   const handleSaveFilter = () => {
     const name = prompt('Enter a name for this filter:');
@@ -225,7 +252,134 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </>
         )}
 
-        {Array.isArray(categories) && categories.map(group => (
+        {/* Tag Filter Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+            className={`text-sm px-2.5 py-1.5 border rounded-md flex items-center gap-1.5 transition ${
+              selectedTagIds.length > 0
+                ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 font-medium'
+                : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-zinc-700 hover:bg-gray-50'
+            }`}
+          >
+            <TagIcon className="w-3.5 h-3.5 text-blue-500" />
+            <span>{selectedTagIds.length > 0 ? `Tags (${selectedTagIds.length})` : 'Filter by Tags'}</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+          </button>
+
+          {isTagDropdownOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setIsTagDropdownOpen(false)} />
+              <div className="absolute left-0 top-full mt-1.5 w-64 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl shadow-xl z-30 p-2.5 text-xs">
+                <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-gray-100 dark:border-zinc-700">
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">Select Tags</span>
+                  {selectedTagIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearAllTags}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Clear ({selectedTagIds.length})
+                    </button>
+                  )}
+                </div>
+
+                {availableTags && availableTags.length > 5 && (
+                  <div className="relative mb-2">
+                    <input
+                      type="text"
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                      placeholder="Search tags..."
+                      className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-zinc-700 rounded bg-gray-50 dark:bg-zinc-900 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {filteredAvailableTags.length === 0 ? (
+                    <div className="text-gray-400 py-3 text-center">No tags found</div>
+                  ) : (
+                    filteredAvailableTags.map(tag => {
+                      const isSelected = selectedTagIds.includes(tag.id);
+                      return (
+                        <label
+                          key={tag.id}
+                          className="flex items-center justify-between px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-zinc-700/60 cursor-pointer select-none"
+                        >
+                          <span className="flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleTag(tag.id)}
+                              className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                            />
+                            <span>#{tag.name}</span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Selected Tag Pills */}
+        {selectedTagIds.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {selectedTagIds.map(id => {
+              const tagObj = availableTags?.find(t => t.id === id);
+              const name = tagObj?.name || id;
+              return (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                >
+                  #{name}
+                  <button
+                    type="button"
+                    onClick={() => toggleTag(id)}
+                    className="hover:text-blue-900 dark:hover:text-white"
+                    title="Remove tag filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })}
+            <button
+              type="button"
+              onClick={clearAllTags}
+              className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline ml-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* Popular / Quick Tag Pills when none selected */}
+        {selectedTagIds.length === 0 && availableTags && availableTags.length > 0 && (
+          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-gray-400">Quick:</span>
+            {availableTags.slice(0, 5).map(tag => (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggleTag(tag.id)}
+                className="text-xs px-2.5 py-0.5 rounded-full bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-blue-900/30 dark:hover:text-blue-300 border border-gray-200 dark:border-zinc-700 transition"
+              >
+                #{tag.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {Array.isArray(categories) && categories
+          .filter(group => !group.name.toLowerCase().includes('campaign'))
+          .map(group => (
           <select
             key={group.id}
             value={selectedCategoryIds[group.id] || ''}
@@ -342,7 +496,36 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                           </div>
                         </div>
                         <div className="flex gap-1 flex-wrap justify-end items-start">
-                          {lead.categories?.map(c => (
+                          {/* Tags */}
+                          {lead.tags && Array.isArray(lead.tags) && lead.tags.map((tagItem, idx) => {
+                            const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
+                            const tagId = typeof tagItem === 'string'
+                              ? availableTags?.find(t => t.name.toLowerCase() === tagItem.toLowerCase())?.id
+                              : tagItem.id;
+                            const isFiltering = tagId ? selectedTagIds.includes(tagId) : false;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={(e) => {
+                                  if (tagId) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleTag(tagId);
+                                  }
+                                }}
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition ${
+                                  isFiltering
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
+                                }`}
+                                title={tagId ? "Click to filter by tag" : undefined}
+                              >
+                                #{tagName}
+                              </button>
+                            );
+                          })}
+                          {lead.categories?.filter(c => !c.name.toLowerCase().includes('campaign')).map(c => (
                             <span key={c.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
                               {c.name}
                             </span>
@@ -398,7 +581,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                     <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead</th>
                     <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company / Title</th>
                     <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Contact</th>
-                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Categories</th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Tags & Categories</th>
                     <th scope="col" className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
                   </tr>
                 </thead>
@@ -460,7 +643,36 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1 flex-wrap">
-                            {lead.categories?.map(c => (
+                            {/* Tags */}
+                          {lead.tags && Array.isArray(lead.tags) && lead.tags.map((tagItem, idx) => {
+                            const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
+                            const tagId = typeof tagItem === 'string'
+                              ? availableTags?.find(t => t.name.toLowerCase() === tagItem.toLowerCase())?.id
+                              : tagItem.id;
+                            const isFiltering = tagId ? selectedTagIds.includes(tagId) : false;
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={(e) => {
+                                  if (tagId) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    toggleTag(tagId);
+                                  }
+                                }}
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition ${
+                                  isFiltering
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100'
+                                }`}
+                                title={tagId ? "Click to filter by tag" : undefined}
+                              >
+                                #{tagName}
+                              </button>
+                            );
+                          })}
+                          {lead.categories?.filter(c => !c.name.toLowerCase().includes('campaign')).map(c => (
                               <span key={c.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap">
                                 {c.name}
                               </span>

@@ -15,6 +15,11 @@ export interface CategoryGroup {
 
 
 
+export interface Tag {
+  id: number;
+  name: string;
+}
+
 export interface Education {
   id: string | number;
   college?: string;
@@ -43,7 +48,9 @@ export interface Lead {
   categories?: CategoryValue[];
   education?: Education[];
   priority: LeadPriority;
-  tags: string[];
+  tags?: (Tag | string)[];
+  tagNames?: string[];
+  tagIds?: number[];
   remark: string;
   nextFollowUpDate?: string; // ISO Date
   lastContactedDate?: string; // ISO Date

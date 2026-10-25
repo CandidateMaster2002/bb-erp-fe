@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../shared/api/client';
-import type { Lead, FollowUp, PaginatedResponse, CategoryGroup, LeadLink } from '../types';
+import type { Lead, FollowUp, PaginatedResponse, CategoryGroup, LeadLink, Tag } from '../types';
 
 export const leadsKeys = {
   all: ['leads'] as const,
@@ -10,8 +10,19 @@ export const leadsKeys = {
   detail: (id: string) => [...leadsKeys.details(), id] as const,
   today: () => ['today-dashboard'] as const,
   categories: (type?: string) => type ? ['categories', type] as const : ['categories'] as const,
+  tags: () => ['tags'] as const,
 };
 
+export const useTags = () => {
+  return useQuery({
+    queryKey: leadsKeys.tags(),
+    queryFn: async () => {
+      const { data } = await api.get('/tags');
+      const arrayData = Array.isArray(data) ? data : (data?.content || data?.data || []);
+      return arrayData as Tag[];
+    },
+  });
+};
 
 export const useCategories = (type: 'LEAD' | 'COLLABORATOR' = 'LEAD') => {
   return useQuery({
@@ -72,6 +83,7 @@ export const useAddLead = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: leadsKeys.today() });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
     },
   });
 };
@@ -330,6 +342,7 @@ export const useUpdateLeadDetail = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: leadsKeys.detail(variables.id.toString()) });
       queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
     },
   });
 };

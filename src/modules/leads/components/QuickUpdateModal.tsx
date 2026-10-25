@@ -75,12 +75,33 @@ export default function QuickUpdateModal({ lead, onClose }: QuickUpdateModalProp
           
           {/* Left Column: Categories */}
           <div className="p-4 md:w-1/3 border-b md:border-b-0 md:border-r border-gray-200 dark:border-zinc-800 bg-gray-50/30 dark:bg-zinc-900/30">
+            {lead.tags && Array.isArray(lead.tags) && lead.tags.length > 0 && (
+              <div className="mb-4 pb-3 border-b border-gray-200 dark:border-zinc-800">
+                <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Tags</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {lead.tags.map((tagItem, idx) => {
+                    const tagName = typeof tagItem === 'string' ? tagItem : tagItem.name;
+                    return (
+                      <span
+                        key={idx}
+                        className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                      >
+                        #{tagName}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-gray-800 dark:text-gray-200">Categories</h3>
             </div>
             
             <div className="space-y-4 mb-4">
-              {Array.isArray(categoryGroups) && categoryGroups.map(group => (
+              {Array.isArray(categoryGroups) && categoryGroups
+                .filter(group => !group.name.toLowerCase().includes('campaign'))
+                .map(group => (
                 <div key={group.id} className="space-y-2">
                   <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group.name}</div>
                   <div className="flex flex-wrap gap-2">

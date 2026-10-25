@@ -271,14 +271,14 @@ export default function BulkActionsBar({
 
         {/* Right: Action Buttons */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* 1. Category / Campaign */}
+          {/* 1. Category */}
           <button
             onClick={() => setIsCategoryModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600/70 rounded-lg text-xs font-medium transition"
-            title="Bulk Update Categories or Campaigns"
+            title="Bulk Update Categories"
           >
             <Tag className="w-3.5 h-3.5 text-blue-400" />
-            <span>Campaign / Tag</span>
+            <span>Categories</span>
           </button>
 
           {/* 2. Schedule Follow-up */}
@@ -417,7 +417,9 @@ export default function BulkActionsBar({
 
               {/* Category Groups */}
               <div className="space-y-4">
-                {Array.isArray(categoryGroups) && categoryGroups.map(group => (
+                {Array.isArray(categoryGroups) && categoryGroups
+                  .filter(group => !group.name.toLowerCase().includes('campaign'))
+                  .map(group => (
                   <div key={group.id} className="space-y-2">
                     <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {group.name}
