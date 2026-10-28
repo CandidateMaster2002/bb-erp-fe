@@ -96,6 +96,7 @@ export interface SavedFilter {
     recordType?: 'LEAD' | 'COLLABORATOR';
     search?: string;
     hasMobileNo?: boolean;
+    mobileUpdatedToday?: boolean;
     categoryIds?: Record<string, string>;
     tagIds?: number[];
   };
