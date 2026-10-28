@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUpdateLeadDetail } from '../api/queries';
 import type { Lead, Education } from '../types';
 import { Pencil, Check, X, Plus, Trash2, Copy } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function LeadDetailsTab({ lead }: { lead: Lead }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -105,6 +106,11 @@ export default function LeadDetailsTab({ lead }: { lead: Lead }) {
                       <Copy className="w-3.5 h-3.5" />
                     )}
                   </button>
+                )}
+                {lead.mobileUpdatedAt && (
+                  <span className="text-xs text-gray-400 dark:text-zinc-500 font-medium">
+                    ({format(new Date(lead.mobileUpdatedAt), 'dd MMM yyyy')})
+                  </span>
                 )}
               </div>
             </div>

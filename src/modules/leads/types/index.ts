@@ -42,6 +42,7 @@ export interface Lead {
   location?: string;
   personalEmail?: string;
   mobileNumber?: string;
+  mobileUpdatedAt?: string;
   company?: string;
   jobTitle?: string;
   linkedinUrl?: string;

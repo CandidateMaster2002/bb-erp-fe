@@ -536,27 +536,34 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 cursor-pointer">
-                      <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
-                      {lead.mobileNumber && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            handleCopyPhone(lead.mobileNumber!, lead.id);
-                          }}
-                          className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
-                          title="Copy mobile number"
-                        >
-                          {copiedPhoneId === lead.id ? (
-                            <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
+                    <div className="flex flex-col items-start gap-0.5 cursor-pointer">
+                      <div className="flex items-center gap-1.5">
+                        <span className={lead.mobileNumber ? '' : 'text-gray-400'}>{lead.mobileNumber || '-'}</span>
+                        {lead.mobileNumber && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleCopyPhone(lead.mobileNumber!, lead.id);
+                            }}
+                            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                            title="Copy mobile number"
+                          >
+                            {copiedPhoneId === lead.id ? (
+                              <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                        <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
+                      </div>
+                      {lead.mobileUpdatedAt && (
+                        <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium">
+                          {format(new Date(lead.mobileUpdatedAt), 'dd MMM yyyy')}
+                        </span>
                       )}
-                      <Edit2 className="w-3 h-3 opacity-0 group-hover/contact:opacity-100 text-gray-400 transition" />
                     </div>
                   )}
                 </td>
@@ -1270,25 +1277,32 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                             ) : (
                               <>
                                 {lead.mobileNumber ? (
-                                  <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                                    <Phone className="w-3 h-3 shrink-0" />
-                                    <span>{lead.mobileNumber}</span>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault();
-                                        handleCopyPhone(lead.mobileNumber!, lead.id);
-                                      }}
-                                      className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
-                                      title="Copy mobile number"
-                                    >
-                                      {copiedPhoneId === lead.id ? (
-                                        <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
-                                      ) : (
-                                        <Copy className="w-3 h-3" />
-                                      )}
-                                    </button>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                      <Phone className="w-3 h-3 shrink-0" />
+                                      <span>{lead.mobileNumber}</span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          handleCopyPhone(lead.mobileNumber!, lead.id);
+                                        }}
+                                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition"
+                                        title="Copy mobile number"
+                                      >
+                                        {copiedPhoneId === lead.id ? (
+                                          <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                    {lead.mobileUpdatedAt && (
+                                      <span className="text-[10px] text-gray-400 dark:text-zinc-500 font-medium">
+                                        • {format(new Date(lead.mobileUpdatedAt), 'dd MMM yyyy')}
+                                      </span>
+                                    )}
                                   </div>
                                 ) : (
                                   <div className="text-xs text-gray-400 italic flex items-center gap-1"><Phone className="w-3 h-3 opacity-50" /> Add contact</div>
