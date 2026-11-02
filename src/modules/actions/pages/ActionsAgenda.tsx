@@ -8,12 +8,15 @@ import {
   useUpdateLeadLog,
   useLeadDetail
 } from '../../leads/api/queries';
-import { CheckCircle2, XCircle, User, Clock, Phone, Copy, Check } from 'lucide-react';
+import { CheckCircle2, XCircle, User, Clock, Phone, Copy, Check, Edit2, Zap, Loader2 } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, isBefore, startOfDay } from 'date-fns';
 import { Link } from 'react-router-dom';
 import TasksView from '../components/TasksView';
 import ScheduleFollowUpModal from '../../leads/components/ScheduleFollowUpModal';
-import type { LeadLog } from '../../leads/types';
+import QuickUpdateModal from '../../leads/components/QuickUpdateModal';
+import EditLeadDetailsModal from '../../leads/components/EditLeadDetailsModal';
+import api from '../../../shared/api/client';
+import type { Lead, LeadLog } from '../../leads/types';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -34,7 +37,10 @@ function LeadActionCard({
   setPostponeDateVal,
   postponeTimeVal,
   setPostponeTimeVal,
-  handleSavePostpone
+  handleSavePostpone,
+  onEditLead,
+  onQuickUpdateLead,
+  isLoadingLead,
 }: {
   action: LeadLog;
   now: Date;
@@ -47,6 +53,9 @@ function LeadActionCard({
   postponeTimeVal: string;
   setPostponeTimeVal: (val: string) => void;
   handleSavePostpone: (id: string | number) => void;
+  onEditLead: (leadId: string | number, currentLead?: Lead | null) => void;
+  onQuickUpdateLead: (leadId: string | number, currentLead?: Lead | null) => void;
+  isLoadingLead?: boolean;
 }) {
   const needsLeadFallback = !action.mobileNumber && !action.linkedinUrl;
   const { data: leadData } = useLeadDetail(action.leadId?.toString(), {
@@ -88,6 +97,27 @@ function LeadActionCard({
               </button>
             )}
 
+            {action.leadId && (
+              <div className="flex items-center gap-0.5">
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditLead(action.leadId, leadData); }}
+                  disabled={isLoadingLead}
+                  className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition disabled:opacity-50"
+                  title="Edit Details"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickUpdateLead(action.leadId, leadData); }}
+                  disabled={isLoadingLead}
+                  className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition disabled:opacity-50"
+                  title="Quick Update / Mark Categories"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {actionPhone && (
               <div className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-zinc-700/60 px-2 py-0.5 rounded border border-gray-200 dark:border-zinc-700">
                 <a
@@ -118,6 +148,21 @@ function LeadActionCard({
               <span className={`text-xs px-2 py-0.5 rounded-md font-medium border ${isOverdue ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-zinc-700 dark:text-gray-300 dark:border-zinc-600'}`}>
                 {format(actionDate, 'MMM d, yyyy')} {isOverdue && '(Overdue)'}
               </span>
+            )}
+
+            {leadData?.categories && leadData.categories.length > 0 && (
+              <div className="hidden sm:flex items-center gap-1 flex-wrap">
+                {leadData.categories
+                  .filter(c => !c.name.toLowerCase().includes('campaign'))
+                  .map(c => (
+                    <span 
+                      key={c.id} 
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 whitespace-nowrap"
+                    >
+                      {c.name}
+                    </span>
+                  ))}
+              </div>
             )}
           </div>
           
@@ -161,6 +206,37 @@ function LeadActionCard({
           >
             <Clock className="w-4 h-4" /> Postpone
           </button>
+
+          {action.leadId && (
+            <>
+              <button 
+                onClick={() => onEditLead(action.leadId, leadData)}
+                disabled={isLoadingLead}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 dark:hover:text-green-400 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700 disabled:opacity-50"
+                title="Edit Details"
+              >
+                {isLoadingLead ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                ) : (
+                  <Edit2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                )}
+                <span>Edit</span>
+              </button>
+              <button 
+                onClick={() => onQuickUpdateLead(action.leadId, leadData)}
+                disabled={isLoadingLead}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-gray-300 dark:hover:text-blue-400 rounded-lg text-sm font-medium transition border border-gray-200 dark:border-zinc-700 disabled:opacity-50"
+                title="Quick Update (Mark Categories & Stages)"
+              >
+                {isLoadingLead ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                ) : (
+                  <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                )}
+                <span>Mark</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -229,6 +305,46 @@ export default function ActionsAgenda() {
   const [postponeActionId, setPostponeActionId] = useState<string | number | null>(null);
   const [postponeDateVal, setPostponeDateVal] = useState<string>('');
   const [postponeTimeVal, setPostponeTimeVal] = useState<string>('');
+
+  const [editLead, setEditLead] = useState<Lead | null>(null);
+  const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
+  const [loadingActionLeadId, setLoadingActionLeadId] = useState<string | number | null>(null);
+
+  const handleEditLead = async (leadId: string | number, preloadedLead?: Lead | null) => {
+    if (!leadId) return;
+    if (preloadedLead && preloadedLead.fullName) {
+      setEditLead(preloadedLead);
+      return;
+    }
+    setLoadingActionLeadId(leadId);
+    try {
+      const { data } = await api.get(`/leads/${leadId}`);
+      setEditLead(data);
+    } catch (err) {
+      console.error('Failed to load lead details:', err);
+      alert('Could not load lead details.');
+    } finally {
+      setLoadingActionLeadId(null);
+    }
+  };
+
+  const handleQuickUpdateLead = async (leadId: string | number, preloadedLead?: Lead | null) => {
+    if (!leadId) return;
+    if (preloadedLead && preloadedLead.categories) {
+      setQuickUpdateLead(preloadedLead);
+      return;
+    }
+    setLoadingActionLeadId(leadId);
+    try {
+      const { data } = await api.get(`/leads/${leadId}`);
+      setQuickUpdateLead(data);
+    } catch (err) {
+      console.error('Failed to load lead details for marking:', err);
+      alert('Could not load lead details.');
+    } finally {
+      setLoadingActionLeadId(null);
+    }
+  };
 
   const handleCompleteLeadAction = async (action: any) => {
     await completeAction.mutateAsync(action.id);
@@ -390,6 +506,9 @@ export default function ActionsAgenda() {
               postponeTimeVal={postponeTimeVal}
               setPostponeTimeVal={setPostponeTimeVal}
               handleSavePostpone={handleSavePostpone}
+              onEditLead={handleEditLead}
+              onQuickUpdateLead={handleQuickUpdateLead}
+              isLoadingLead={loadingActionLeadId === action.leadId}
             />
           ))
         )}
@@ -403,6 +522,14 @@ export default function ActionsAgenda() {
       </div>
       )}
 
+      <QuickUpdateModal 
+        lead={quickUpdateLead} 
+        onClose={() => setQuickUpdateLead(null)} 
+      />
+      <EditLeadDetailsModal 
+        lead={editLead} 
+        onClose={() => setEditLead(null)} 
+      />
       <ScheduleFollowUpModal 
         isOpen={isFollowUpModalOpen}
         onClose={() => setIsFollowUpModalOpen(false)}

@@ -175,6 +175,7 @@ export const useUpdateLeadCategories = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: leadsKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
     },
   });
 };
@@ -385,6 +386,7 @@ export const useUpdateLeadDetail = () => {
       queryClient.invalidateQueries({ queryKey: leadsKeys.detail(variables.id.toString()) });
       queryClient.invalidateQueries({ queryKey: leadsKeys.lists() });
       queryClient.invalidateQueries({ queryKey: leadsKeys.tags() });
+      queryClient.invalidateQueries({ queryKey: actionKeys.all });
     },
   });
 };
