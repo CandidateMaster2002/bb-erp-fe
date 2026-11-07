@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   MoreHorizontal,
   RefreshCw,
-  Bookmark
+  Bookmark,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from '../shared/utils/cn';
 import QuickAddSheet from '../modules/leads/components/QuickAddSheet';
@@ -26,6 +27,7 @@ import { useSavedFilters } from '../modules/leads/api/filters';
 const ALL_MODULES = [
   { name: 'Actions', path: '/', icon: CalendarCheck, exact: true },
   { name: 'Leads CRM', path: '/leads', icon: Users },
+  { name: 'Bulk Mark', path: '/leads/bulk-mark', icon: CheckSquare },
   { name: 'Collaborators', path: '/collaborators', icon: Briefcase },
   { name: 'Staffing / ATS', path: '/staffing', icon: Briefcase },
   { name: 'Saved Filters', path: '/saved-filters', icon: Bookmark },
