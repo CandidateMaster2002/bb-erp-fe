@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead } from '../api/queries';
+import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead, useUpdateLeadCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2, Bookmark, Clock } from 'lucide-react';
+import { Search, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2, Bookmark, Clock, CheckSquare, MessageCircle } from 'lucide-react';
 import api from '../../../shared/api/client';
 import { exportLeadsToExcel } from '../utils/excelExport';
 import { format } from 'date-fns';
@@ -10,7 +10,7 @@ import QuickUpdateModal from '../components/QuickUpdateModal';
 import ScheduleFollowUpModal from '../components/ScheduleFollowUpModal';
 import EditLeadDetailsModal from '../components/EditLeadDetailsModal';
 import BulkActionsBar from '../components/BulkActionsBar';
-import type { Lead } from '../types';
+import type { Lead, CategoryGroup } from '../types';
 
 const LinkedinIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -55,12 +55,25 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       }
     });
 
+    const urlView = searchParams.get('view');
+    let urlViewMode: 'card' | 'table' | 'bulk-mark' = 'table';
+    if (urlView === 'bulk-mark' || urlView === 'bulk') {
+      urlViewMode = 'bulk-mark';
+    } else if (urlView === 'card') {
+      urlViewMode = 'card';
+    } else if (urlView === 'table') {
+      urlViewMode = 'table';
+    } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      urlViewMode = 'card';
+    }
+
     return {
       search: urlSearch,
       mobile: urlMobile,
       mobileUpdatedToday: urlMobileUpdatedToday,
       tagIds: urlTagIds,
       categories: urlCatMap,
+      viewMode: urlViewMode,
     };
   };
 
@@ -103,9 +116,50 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   const [quickUpdateLead, setQuickUpdateLead] = useState<Lead | null>(null);
   const [followUpLeadId, setFollowUpLeadId] = useState<string | number | null>(null);
   const [editLead, setEditLead] = useState<Lead | null>(null);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
-    return typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : 'table';
-  });
+  const [viewMode, setViewMode] = useState<'card' | 'table' | 'bulk-mark'>(initialFilters.viewMode);
+
+  // Bulk Mark state & optimistic handlers
+  const updateLeadCategories = useUpdateLeadCategories();
+  const [pendingMarkLeadId, setPendingMarkLeadId] = useState<string | null>(null);
+  const [localCategoryOverrides, setLocalCategoryOverrides] = useState<Record<string, number[]>>({});
+
+  const getEffectiveCategoryIds = (lead: Lead): number[] => {
+    const leadIdStr = lead.id.toString();
+    if (localCategoryOverrides[leadIdStr] !== undefined) {
+      return localCategoryOverrides[leadIdStr];
+    }
+    return (lead.categories || []).map((c) => Number(c.id));
+  };
+
+  const handleDirectMarkCategory = async (lead: Lead, group: CategoryGroup, clickedValueId: number) => {
+    const leadIdStr = lead.id.toString();
+    const groupValueIds = (group.values || []).map((v) => Number(v.id));
+    const currentIds = getEffectiveCategoryIds(lead);
+
+    const withoutThisGroup = currentIds.filter((id) => !groupValueIds.includes(id));
+    const isAlreadySelected = currentIds.includes(clickedValueId);
+    const nextIds = isAlreadySelected ? withoutThisGroup : [...withoutThisGroup, clickedValueId];
+
+    // Optimistic local state update
+    setLocalCategoryOverrides((prev) => ({ ...prev, [leadIdStr]: nextIds }));
+    setPendingMarkLeadId(leadIdStr);
+
+    try {
+      await updateLeadCategories.mutateAsync({
+        id: leadIdStr,
+        categoryIds: nextIds,
+      });
+    } catch (error) {
+      console.error('Failed to update categories', error);
+      setLocalCategoryOverrides((prev) => {
+        const copy = { ...prev };
+        delete copy[leadIdStr];
+        return copy;
+      });
+    } finally {
+      setPendingMarkLeadId(null);
+    }
+  };
   
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -293,9 +347,10 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
 
   const selectedLeads = data?.content?.filter(l => selectedIds.includes(l.id.toString())) || [];
 
-  // Reset selection when search / filter changes
+  // Reset selection & optimistic overrides when search / filter changes
   useEffect(() => {
     setSelectedIds([]);
+    setLocalCategoryOverrides({});
     setPage(0);
   }, [debouncedSearch, mobileFilter, mobileUpdatedToday, JSON.stringify(selectedCategoryIds), JSON.stringify(selectedTagIds), activeFilterId]);
 
@@ -313,6 +368,8 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       if (valId) params.set(`cat_${grpId}`, valId);
     });
     if (activeFilterId) params.set('viewId', activeFilterId);
+    if (viewMode === 'bulk-mark') params.set('view', 'bulk-mark');
+    else if (viewMode === 'card') params.set('view', 'card');
 
     const queryString = params.toString();
     const relativePath = `/${routePath}${queryString ? '?' + queryString : ''}`;
@@ -344,18 +401,24 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
       if (valId) params.set(`cat_${grpId}`, valId);
     });
     if (activeFilterId) params.set('viewId', activeFilterId);
+    if (viewMode === 'bulk-mark') params.set('view', 'bulk-mark');
+    else if (viewMode === 'card') params.set('view', 'card');
 
     const queryString = params.toString();
     const newPath = `/${routePath}${queryString ? '?' + queryString : ''}`;
     if (window.location.pathname + window.location.search !== newPath) {
       window.history.replaceState(null, '', newPath);
     }
-  }, [debouncedSearch, mobileFilter, mobileUpdatedToday, selectedTagIds, selectedCategoryIds, activeFilterId, routePath, recordType]);
+  }, [debouncedSearch, mobileFilter, mobileUpdatedToday, selectedTagIds, selectedCategoryIds, activeFilterId, routePath, recordType, viewMode]);
 
   // Synchronize when URL searchParams changes from navigation (e.g. sidebar link clicked)
   useEffect(() => {
     const parsed = parseUrlFilters();
     const viewId = searchParams.get('viewId') || searchParams.get('filterId') || '';
+
+    if (parsed.viewMode && parsed.viewMode !== viewMode) {
+      setViewMode(parsed.viewMode);
+    }
 
     if (viewId && filtersData && filtersData.length > 0) {
       const matched = filtersData.find(f => String(f.id) === String(viewId));
@@ -651,6 +714,306 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     </div>
   );
 
+  const BULK_MARK_GROUP_COLORS = [
+    // Group 0: e.g. Relationship Stage (Blue)
+    {
+      header: 'text-blue-600 dark:text-blue-400',
+      base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/20',
+      active: 'bg-blue-100 text-blue-900 border-blue-500 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-500 font-semibold shadow-xs',
+    },
+    // Group 1: e.g. Business Potential (Emerald)
+    {
+      header: 'text-emerald-600 dark:text-emerald-400',
+      base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-emerald-400 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
+      active: 'bg-emerald-100 text-emerald-900 border-emerald-500 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-500 font-semibold shadow-xs',
+    },
+    // Group 2: e.g. Priority / Source (Purple)
+    {
+      header: 'text-purple-600 dark:text-purple-400',
+      base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-purple-400 hover:bg-purple-50/40 dark:hover:bg-purple-950/20',
+      active: 'bg-purple-100 text-purple-900 border-purple-500 dark:bg-purple-900/60 dark:text-purple-200 dark:border-purple-500 font-semibold shadow-xs',
+    },
+    // Group 3: e.g. Additional Group (Amber)
+    {
+      header: 'text-amber-600 dark:text-amber-400',
+      base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-amber-400 hover:bg-amber-50/40 dark:hover:bg-amber-950/20',
+      active: 'bg-amber-100 text-amber-900 border-amber-500 dark:bg-amber-900/60 dark:text-amber-200 dark:border-amber-500 font-semibold shadow-xs',
+    },
+  ];
+
+  const renderBulkMarkView = () => {
+    const bulkMarkGroups = (Array.isArray(categories) ? categories : []).filter(
+      (g) => !g.name.toLowerCase().includes('campaign')
+    );
+
+    return (
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-auto h-full">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm">
+          <thead className="bg-gray-50 dark:bg-zinc-900 sticky top-0 z-10 shadow-sm">
+            <tr>
+              <th scope="col" className="w-10 px-3 py-3 text-center bg-gray-50 dark:bg-zinc-900">
+                <input
+                  type="checkbox"
+                  checked={isAllSelected}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                  title={isAllSelected ? "Deselect All" : "Select All"}
+                />
+              </th>
+              <th scope="col" className="w-12 px-2 py-3 text-center font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">
+                #
+              </th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-zinc-900 min-w-[200px]">
+                {title}
+              </th>
+              <th scope="col" className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-zinc-900 min-w-[170px]">
+                Mobile No
+              </th>
+              {bulkMarkGroups.map((group, idx) => {
+                const colorConfig = BULK_MARK_GROUP_COLORS[idx % BULK_MARK_GROUP_COLORS.length];
+                return (
+                  <th
+                    key={group.id}
+                    scope="col"
+                    className={`px-4 py-3 text-left font-bold ${colorConfig.header} bg-gray-50 dark:bg-zinc-900 min-w-[180px] whitespace-nowrap`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>{group.name}</span>
+                      <span className="text-[10px] font-normal opacity-70">(Tap to set)</span>
+                    </div>
+                  </th>
+                );
+              })}
+              <th scope="col" className="px-3 py-3 text-right font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900 w-20">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
+            {data?.content?.map((lead, index) => {
+              const isSelected = selectedIds.includes(lead.id.toString());
+              const serialNo = page * pageSize + index + 1;
+              const isPending = pendingMarkLeadId === lead.id.toString();
+              const currentCatIds = getEffectiveCategoryIds(lead);
+
+              return (
+                <tr
+                  key={lead.id}
+                  className={`hover:bg-gray-50 dark:hover:bg-zinc-700/50 group transition ${
+                    isSelected ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''
+                  } ${isPending ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
+                >
+                  {/* Multi-select Checkbox */}
+                  <td className="w-10 px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(lead.id)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </td>
+
+                  {/* Serial Number */}
+                  <td className="w-12 px-2 py-3 text-center text-xs font-mono font-medium text-gray-400 dark:text-gray-500">
+                    {serialNo}
+                  </td>
+
+                  {/* Lead Name & Details */}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        to={`/${routePath}/${lead.id}`}
+                        className="font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[200px]"
+                      >
+                        {lead.fullName}
+                      </Link>
+                      {lead.linkedinUrl && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(lead.linkedinUrl, '_blank');
+                          }}
+                          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 shrink-0"
+                          title="Open LinkedIn"
+                        >
+                          <LinkedinIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {isPending && <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin shrink-0" />}
+                    </div>
+                    {(lead.company || lead.jobTitle) && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[220px] mt-0.5">
+                        {lead.jobTitle && lead.company ? `${lead.jobTitle} • ${lead.company}` : lead.company || lead.jobTitle}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Mobile No Column */}
+                  <td
+                    className="px-4 py-3 whitespace-nowrap text-gray-700 dark:text-gray-300 relative group/contact"
+                    onClick={(e) => {
+                      if (editingContactId !== lead.id.toString()) {
+                        e.preventDefault();
+                        setEditingContactId(lead.id.toString());
+                        setEditingContactValue(lead.mobileNumber || '');
+                      }
+                    }}
+                  >
+                    {editingContactId === lead.id.toString() ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingContactValue}
+                          onChange={(e) => setEditingContactValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleContactSave(lead.id);
+                            if (e.key === 'Escape') setEditingContactId(null);
+                          }}
+                          className="w-32 px-2 py-1 text-xs border rounded dark:bg-zinc-800 dark:border-zinc-700 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900 dark:text-gray-100"
+                          placeholder="+91..."
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleContactSave(lead.id);
+                          }}
+                          className="text-green-600 hover:text-green-700 p-1 bg-green-50 rounded dark:bg-green-900/30 transition cursor-pointer"
+                        >
+                          <Check className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setEditingContactId(null);
+                          }}
+                          className="text-gray-500 hover:text-gray-700 p-1 bg-gray-100 rounded dark:bg-zinc-800 transition cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 cursor-pointer">
+                        <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <span className={`text-xs font-mono font-medium ${lead.mobileNumber ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 italic'}`}>
+                          {lead.mobileNumber || 'No mobile'}
+                        </span>
+                        {lead.mobileNumber ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleCopyPhone(lead.mobileNumber!, lead.id);
+                              }}
+                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition cursor-pointer"
+                              title="Copy mobile number"
+                            >
+                              {copiedPhoneId === lead.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <a
+                              href={`https://wa.me/${lead.mobileNumber.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition cursor-pointer"
+                              title="WhatsApp Chat"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5 text-green-500" />
+                            </a>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="p-1 text-gray-400 hover:text-blue-600 rounded transition opacity-0 group-hover/contact:opacity-100"
+                            title="Add mobile number"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Direct Tap Pills for Each Category Group */}
+                  {bulkMarkGroups.map((group, groupIdx) => {
+                    const colorConfig = BULK_MARK_GROUP_COLORS[groupIdx % BULK_MARK_GROUP_COLORS.length];
+                    return (
+                      <td key={group.id} className="px-4 py-2.5">
+                        <div className="flex flex-wrap gap-1.5 max-w-[340px]">
+                          {group.values?.map((val) => {
+                            const valId = Number(val.id);
+                            const isSelected = currentCatIds.includes(valId);
+                            return (
+                              <button
+                                key={val.id}
+                                type="button"
+                                disabled={isPending}
+                                onClick={() => handleDirectMarkCategory(lead, group, valId)}
+                                className={`px-2.5 py-1 text-xs rounded-full border transition-all duration-150 cursor-pointer ${
+                                  isSelected ? colorConfig.active : colorConfig.base
+                                } ${isPending ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                title={`Tap to ${isSelected ? 'unmark' : 'mark'} "${val.name}"`}
+                              >
+                                {val.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    );
+                  })}
+
+                  {/* Action Buttons */}
+                  <td className="px-3 py-3 text-right whitespace-nowrap">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setEditLead(lead);
+                        }}
+                        className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-zinc-700 rounded transition cursor-pointer"
+                        title="Edit Details"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setQuickUpdateLead(lead);
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-zinc-700 rounded transition cursor-pointer"
+                        title="Quick Update / Activity"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDeleteLead(lead.id);
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-zinc-700 rounded transition cursor-pointer"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   const renderThinPagination = () => {
     if (!data || data.totalPages <= 1) return null;
     return (
@@ -716,7 +1079,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
         <div className="flex items-center justify-between pb-2.5 shrink-0 border-b border-gray-200 dark:border-zinc-800">
           <div className="flex items-center gap-2.5">
             <h1 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <span>{title} Table</span>
+              <span>{title} {viewMode === 'bulk-mark' ? 'Bulk Mark' : 'Table'}</span>
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
                 {data?.totalElements ?? data?.content?.length ?? 0} total
               </span>
@@ -729,6 +1092,25 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {/* View Switcher in Fullscreen */}
+            <div className="flex bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 rounded-md overflow-hidden shadow-xs">
+              <button 
+                onClick={() => setViewMode('table')} 
+                className={`p-1.5 ${viewMode === 'table' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+                title="Table View"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setViewMode('bulk-mark')} 
+                className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1 ${viewMode === 'bulk-mark' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+                title="Bulk Mark View (Direct Tap)"
+              >
+                <CheckSquare className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs pr-1">Bulk Mark</span>
+              </button>
+            </div>
+
             {/* Thin Top Pagination in Full Screen */}
             {renderThinPagination()}
 
@@ -783,7 +1165,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           {isLoading ? (
             <div className="text-center py-12 text-gray-500">{`Loading ${title.toLowerCase()}...`}</div>
           ) : data?.content && data.content.length > 0 ? (
-            renderTableView()
+            viewMode === 'bulk-mark' ? renderBulkMarkView() : renderTableView()
           ) : (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               {`No ${title.toLowerCase()} found.`}
@@ -896,6 +1278,14 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               title="Card View"
             >
               <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('bulk-mark')} 
+              className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1.5 ${viewMode === 'bulk-mark' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+              title="Bulk Mark View (Direct Tap)"
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs pr-1">Bulk Mark</span>
             </button>
           </div>
 
@@ -1405,6 +1795,8 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 );
               })}
             </div>
+          ) : viewMode === 'bulk-mark' ? (
+            renderBulkMarkView()
           ) : (
             renderTableView()
           )

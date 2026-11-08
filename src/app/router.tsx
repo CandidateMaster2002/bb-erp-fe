@@ -4,7 +4,6 @@ import Login from '../modules/auth/Login';
 
 import LeadsList from '../modules/leads/pages/LeadsList';
 import LeadDetail from '../modules/leads/pages/LeadDetail';
-import BulkMarkPage from '../modules/leads/pages/BulkMarkPage';
 import PipelineBoard from '../modules/leads/pages/Pipeline';
 import ReportsDashboard from '../modules/leads/pages/Reports';
 import CategorySettings from '../modules/settings/pages/CategorySettings';
@@ -52,7 +51,7 @@ export const router = createBrowserRouter([
         element: <LeadsList />,
       },
       {
-        path: 'leads/bulk-mark', element: <BulkMarkPage />,
+        path: 'leads/bulk-mark', element: <Navigate to="/leads?view=bulk-mark" replace />,
       },
       {
         path: 'leads/:id', element: <LeadDetail /> },
