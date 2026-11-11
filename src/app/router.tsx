@@ -12,6 +12,7 @@ import ActionDetail from '../modules/actions/pages/ActionDetail';
 import VaultList from '../modules/vault/pages/VaultList';
 import GlobalLinks from '../modules/links/pages/GlobalLinks';
 import SavedFiltersPage from '../modules/leads/pages/SavedFiltersPage';
+import InvoicesPage from '../modules/invoices/pages/InvoicesPage';
 
 import StaffingLayout from '../modules/staffing/pages/StaffingLayout';
 import ClientsList from '../modules/staffing/pages/ClientsList';
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
       {
         path: 'saved-filters',
         element: <SavedFiltersPage />,
+      },
+      {
+        path: 'invoices',
+        element: <InvoicesPage />,
       },
       {
         path: 'links',

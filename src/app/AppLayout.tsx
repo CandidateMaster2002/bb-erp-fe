@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   MoreHorizontal,
   RefreshCw,
-  Bookmark
+  Bookmark,
+  Receipt
 } from 'lucide-react';
 import { cn } from '../shared/utils/cn';
 import QuickAddSheet from '../modules/leads/components/QuickAddSheet';
@@ -29,6 +30,7 @@ const ALL_MODULES = [
   { name: 'Collaborators', path: '/collaborators', icon: Briefcase },
   { name: 'Staffing / ATS', path: '/staffing', icon: Briefcase },
   { name: 'Saved Filters', path: '/saved-filters', icon: Bookmark },
+  { name: 'Invoices', path: '/invoices', icon: Receipt },
   { name: 'Personal Vault', path: '/vault', icon: Sparkles },
   { name: 'Global Links', path: '/links', icon: Link2 },
   { name: 'Settings', path: '/settings', icon: Settings },

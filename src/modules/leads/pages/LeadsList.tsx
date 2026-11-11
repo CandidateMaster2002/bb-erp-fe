@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLeadsList, useCategories, useTags, useUpdateLeadDetail, useDeleteLead, useUpdateLeadCategories } from '../api/queries';
 import { useSavedFilters, useSaveFilter, useDeleteFilter } from '../api/filters';
-import { Search, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2, Bookmark, Clock, CheckSquare, MessageCircle } from 'lucide-react';
+import { Search, Trash2, Link2, Phone, Zap, LayoutGrid, List, Edit2, Check, X, Tag as TagIcon, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Copy, FileSpreadsheet, Loader2, Bookmark, Clock, MessageCircle } from 'lucide-react';
 import api from '../../../shared/api/client';
 import { exportLeadsToExcel } from '../utils/excelExport';
 import { format } from 'date-fns';
@@ -552,6 +552,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 title={isAllSelected ? "Deselect All" : "Select All"}
               />
             </th>
+            <th scope="col" className="w-12 px-2 py-3 text-center font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">
+              #
+            </th>
             <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Lead</th>
             <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Company / Title</th>
             <th scope="col" className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-zinc-900">Contact</th>
@@ -560,8 +563,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-zinc-700">
-          {data?.content?.map(lead => {
+          {data?.content?.map((lead, index) => {
             const isSelected = selectedIds.includes(lead.id.toString());
+            const serialNo = page * pageSize + index + 1;
             return (
               <tr 
                 key={lead.id} 
@@ -576,6 +580,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                     onChange={() => toggleSelect(lead.id)}
                     className="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-zinc-700 focus:ring-blue-500 cursor-pointer"
                   />
+                </td>
+                <td className="w-12 px-2 py-3 text-center text-xs font-mono font-medium text-gray-400 dark:text-gray-500">
+                  {serialNo}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <Link to={`/${routePath}/${lead.id}`} className="block">
@@ -715,25 +722,21 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
   );
 
   const BULK_MARK_GROUP_COLORS = [
-    // Group 0: e.g. Relationship Stage (Blue)
     {
       header: 'text-blue-600 dark:text-blue-400',
       base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/20',
       active: 'bg-blue-100 text-blue-900 border-blue-500 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-500 font-semibold shadow-xs',
     },
-    // Group 1: e.g. Business Potential (Emerald)
     {
       header: 'text-emerald-600 dark:text-emerald-400',
       base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-emerald-400 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20',
       active: 'bg-emerald-100 text-emerald-900 border-emerald-500 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-500 font-semibold shadow-xs',
     },
-    // Group 2: e.g. Priority / Source (Purple)
     {
       header: 'text-purple-600 dark:text-purple-400',
       base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-purple-400 hover:bg-purple-50/40 dark:hover:bg-purple-950/20',
       active: 'bg-purple-100 text-purple-900 border-purple-500 dark:bg-purple-900/60 dark:text-purple-200 dark:border-purple-500 font-semibold shadow-xs',
     },
-    // Group 3: e.g. Additional Group (Amber)
     {
       header: 'text-amber-600 dark:text-amber-400',
       base: 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-zinc-700 hover:border-amber-400 hover:bg-amber-50/40 dark:hover:bg-amber-950/20',
@@ -741,10 +744,71 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
     },
   ];
 
+  const getDirectPillClass = (_groupName: string, valueName: string, isSelected: boolean) => {
+    const v = valueName.toLowerCase().trim();
+    if (v === 'hot') {
+      return isSelected
+        ? 'bg-rose-600 text-white border-rose-700 font-bold shadow-xs scale-105'
+        : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 hover:border-rose-400 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800';
+    }
+    if (v === 'warm') {
+      return isSelected
+        ? 'bg-amber-500 text-white border-amber-600 font-bold shadow-xs scale-105'
+        : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:border-amber-400 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800';
+    }
+    if (v === 'cold') {
+      return isSelected
+        ? 'bg-sky-600 text-white border-sky-700 font-bold shadow-xs scale-105'
+        : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 hover:border-sky-400 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800';
+    }
+    if (v === 'call done') {
+      return isSelected
+        ? 'bg-emerald-600 text-white border-emerald-700 font-bold shadow-xs scale-105'
+        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800';
+    }
+    if (v === 'trash') {
+      return isSelected
+        ? 'bg-red-700 text-white border-red-800 font-bold shadow-xs scale-105'
+        : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-400 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800';
+    }
+    if (v === 'i messaged') {
+      return isSelected
+        ? 'bg-indigo-600 text-white border-indigo-700 font-bold shadow-xs scale-105'
+        : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-400 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800';
+    }
+    if (v === 'he replied') {
+      return isSelected
+        ? 'bg-teal-600 text-white border-teal-700 font-bold shadow-xs scale-105'
+        : 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-400 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800';
+    }
+    if (v === "didn't respond" || v === 'didnt respond') {
+      return isSelected
+        ? 'bg-zinc-600 text-white border-zinc-700 font-bold shadow-xs scale-105'
+        : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200 hover:border-zinc-400 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700';
+    }
+    if (v === 'no whatsapp no') {
+      return isSelected
+        ? 'bg-yellow-600 text-white border-yellow-700 font-bold shadow-xs scale-105'
+        : 'bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-400 dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800';
+    }
+    return isSelected
+      ? 'bg-blue-600 text-white border-blue-700 font-bold shadow-xs scale-105'
+      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-400 dark:bg-zinc-800 dark:text-gray-300 dark:border-zinc-700';
+  };
+
+  const desiredGroupOrder = ['stage', 'business potential', 'helpfulness'];
+  const bulkMarkGroups = (Array.isArray(categories) ? categories : [])
+    .filter((g) => !g.name.toLowerCase().includes('campaign'))
+    .sort((a, b) => {
+      const idxA = desiredGroupOrder.findIndex((o) => a.name.toLowerCase().includes(o));
+      const idxB = desiredGroupOrder.findIndex((o) => b.name.toLowerCase().includes(o));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
   const renderBulkMarkView = () => {
-    const bulkMarkGroups = (Array.isArray(categories) ? categories : []).filter(
-      (g) => !g.name.toLowerCase().includes('campaign')
-    );
 
     return (
       <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 overflow-auto h-full">
@@ -942,8 +1006,7 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                   </td>
 
                   {/* Direct Tap Pills for Each Category Group */}
-                  {bulkMarkGroups.map((group, groupIdx) => {
-                    const colorConfig = BULK_MARK_GROUP_COLORS[groupIdx % BULK_MARK_GROUP_COLORS.length];
+                  {bulkMarkGroups.map((group) => {
                     return (
                       <td key={group.id} className="px-3 py-2">
                         <div className="flex flex-wrap gap-1 items-center min-w-[200px]">
@@ -956,8 +1019,8 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => handleDirectMarkCategory(lead, group, valId)}
-                                className={`px-2 py-0.5 text-[11px] rounded-full border transition-all duration-150 cursor-pointer ${
-                                  isSelected ? colorConfig.active : colorConfig.base
+                                className={`px-2.5 py-0.5 text-[11px] rounded-full border transition-all duration-150 cursor-pointer ${
+                                  getDirectPillClass(group.name, val.name, isSelected)
                                 } ${isPending ? 'opacity-60 cursor-not-allowed' : ''}`}
                                 title={`Tap to ${isSelected ? 'unmark' : 'mark'} "${val.name}"`}
                               >
@@ -1103,11 +1166,11 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
               </button>
               <button 
                 onClick={() => setViewMode('bulk-mark')} 
-                className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1 ${viewMode === 'bulk-mark' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
-                title="Bulk Mark View (Direct Tap)"
+                className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1.5 ${viewMode === 'bulk-mark' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 font-bold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+                title="⚡ 1-Tap Triage (Direct Tap Stage, Potential, Helpfulness)"
               >
-                <CheckSquare className="w-4 h-4" />
-                <span className="hidden sm:inline text-xs pr-1">Bulk Mark</span>
+                <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span className="hidden sm:inline text-xs pr-1 font-bold">⚡ 1-Tap Triage</span>
               </button>
             </div>
 
@@ -1281,11 +1344,11 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
             </button>
             <button 
               onClick={() => setViewMode('bulk-mark')} 
-              className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1.5 ${viewMode === 'bulk-mark' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
-              title="Bulk Mark View (Direct Tap)"
+              className={`p-1.5 border-l border-gray-300 dark:border-zinc-700 flex items-center gap-1.5 ${viewMode === 'bulk-mark' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 font-bold' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-700'}`}
+              title="⚡ 1-Tap Triage (Direct Tap Stage, Potential, Helpfulness)"
             >
-              <CheckSquare className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs pr-1">Bulk Mark</span>
+              <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span className="hidden sm:inline text-xs pr-1 font-bold">⚡ 1-Tap Triage</span>
             </button>
           </div>
 
@@ -1639,8 +1702,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                 )}
               </div>
 
-              {data.content.map(lead => {
+              {data.content.map((lead, index) => {
                 const isSelected = selectedIds.includes(lead.id.toString());
+                const serialNo = page * pageSize + index + 1;
                 return (
                   <div 
                     key={lead.id} 
@@ -1665,6 +1729,9 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                         <div className="flex-1 min-w-0 pr-2">
                           <Link to={`/${routePath}/${lead.id}`} className="group block">
                             <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 shrink-0">
+                                #{serialNo}
+                              </span>
                               <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 truncate">{lead.fullName}</h3>
                               {lead.linkedinUrl && (
                                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(lead.linkedinUrl, '_blank'); }} className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
@@ -1802,6 +1869,41 @@ export default function LeadsList({ recordType = 'LEAD' }: { recordType?: 'LEAD'
                             Last: {format(new Date(lead.lastContactedDate), 'MMM d')}
                           </span>
                         )}
+                      </div>
+
+                      {/* 1-Tap Quick Mark Pills on Card */}
+                      <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-zinc-700/60 space-y-2">
+                        {bulkMarkGroups.map((group) => {
+                          const currentCatIds = getEffectiveCategoryIds(lead);
+                          const isPending = pendingMarkLeadId === lead.id.toString();
+                          return (
+                            <div key={group.id} className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 shrink-0">
+                                {group.name}:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {group.values?.map((val) => {
+                                  const valId = Number(val.id);
+                                  const isSelected = currentCatIds.includes(valId);
+                                  return (
+                                    <button
+                                      key={val.id}
+                                      type="button"
+                                      disabled={isPending}
+                                      onClick={() => handleDirectMarkCategory(lead, group, valId)}
+                                      className={`px-2 py-0.5 text-[11px] rounded-full border transition-all cursor-pointer ${
+                                        getDirectPillClass(group.name, val.name, isSelected)
+                                      } ${isPending ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                      title={`Tap to ${isSelected ? 'unmark' : 'mark'} "${val.name}"`}
+                                    >
+                                      {val.name}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
