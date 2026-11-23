@@ -12,11 +12,22 @@ import {
 } from 'docx';
 import type { InvoiceData } from '../types';
 import { formatINR } from '../components/InvoiceTemplate';
+import { sanitizeBusinessName } from './gstUtils';
 
 export async function exportToDocx(invoice: InvoiceData): Promise<void> {
   const isCgstSgst = invoice.taxType === 'CGST_SGST';
-  const halfTaxRate = (invoice.taxRate || 0) / 2;
+  const halfTaxRate = Number(((invoice.taxRate || 0) / 2).toFixed(2));
   const halfTaxAmount = (invoice.taxAmount || 0) / 2;
+
+  const sellerBusinessName = sanitizeBusinessName(
+    invoice.billerCompany || invoice.billerName,
+    'AGARWAL CREATION'
+  );
+
+  const bankAccountHolder = sanitizeBusinessName(
+    invoice.accountHolderName,
+    sellerBusinessName
+  );
 
   const tableBorderNone = {
     top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -32,14 +43,14 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
     right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
   };
 
-  // Header Table (Biller details Left, Tax Invoice & Balance Due Right)
+  // Header Table (Seller details Left, Tax Invoice & Balance Due Right)
   const headerTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: tableBorderNone,
     rows: [
       new TableRow({
         children: [
-          // Left cell: Biller
+          // Left cell: Seller
           new TableCell({
             width: { size: 60, type: WidthType.PERCENTAGE },
             borders: tableBorderNone,
@@ -47,22 +58,23 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: invoice.billerCompany || invoice.billerName || 'YOUR COMPANY NAME',
+                    text: sellerBusinessName,
                     bold: true,
                     size: 28, // 14pt
                   }),
                 ],
               }),
-              ...(invoice.billerName && invoice.billerCompany !== invoice.billerName
-                ? [new Paragraph({ children: [new TextRun({ text: invoice.billerName, size: 20, color: '64748B' })] })]
-                : []),
               new Paragraph({
                 children: [new TextRun({ text: invoice.billerAddress || '', size: 18, color: '475569' })],
               }),
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: [invoice.billerCity, invoice.billerState, invoice.billerPincode]
+                    text: [
+                      invoice.billerCity,
+                      invoice.billerState,
+                      invoice.billerPincode ? `– ${invoice.billerPincode}` : '',
+                    ]
                       .filter(Boolean)
                       .join(', '),
                     size: 18,
@@ -71,10 +83,20 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 ],
               }),
               new Paragraph({
-                children: [new TextRun({ text: invoice.billerCountry || 'India', size: 18, color: '475569' })],
+                children: [
+                  new TextRun({
+                    text: `State: ${invoice.billerState || 'Rajasthan'} (${invoice.billerStateCode || '08'})`,
+                    size: 18,
+                    color: '475569',
+                  }),
+                ],
               }),
               ...(invoice.billerGstin
-                ? [new Paragraph({ children: [new TextRun({ text: `GSTIN: ${invoice.billerGstin}`, bold: true, size: 18 })] })]
+                ? [
+                    new Paragraph({
+                      children: [new TextRun({ text: `GSTIN: ${invoice.billerGstin}`, bold: true, size: 18 })],
+                    }),
+                  ]
                 : []),
             ],
           }),
@@ -97,10 +119,10 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: `# ${invoice.invoiceNumber || 'INV-000001'}`,
+                    text: `# ${invoice.invoiceNumber || 'INV-000602'}`,
                     bold: true,
-                    size: 22,
-                    color: '334155',
+                    size: 20,
+                    color: '475569',
                   }),
                 ],
               }),
@@ -108,19 +130,10 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({
-                    text: 'Balance Due',
-                    size: 18,
-                    color: '64748B',
-                  }),
-                ],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: [
-                  new TextRun({
-                    text: `₹${formatINR(invoice.balanceDue ?? invoice.totalAmount ?? 0)}`,
+                    text: `Balance Due: ₹${formatINR(invoice.balanceDue ?? invoice.totalAmount ?? 0)}`,
                     bold: true,
-                    size: 26,
+                    size: 24,
+                    color: '0F172A',
                   }),
                 ],
               }),
@@ -131,14 +144,14 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
     ],
   });
 
-  // Client & Dates Table
-  const clientAndDatesTable = new Table({
+  // Bill To & Meta Table
+  const metaTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: tableBorderNone,
     rows: [
       new TableRow({
         children: [
-          // Client details
+          // Bill To
           new TableCell({
             width: { size: 60, type: WidthType.PERCENTAGE },
             borders: tableBorderNone,
@@ -146,7 +159,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: 'BILL TO',
+                    text: 'Bill To',
                     bold: true,
                     size: 18,
                     color: '64748B',
@@ -178,14 +191,22 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 ],
               }),
               ...(invoice.clientGstin
-                ? [new Paragraph({ children: [new TextRun({ text: `GSTIN: ${invoice.clientGstin}`, bold: true, size: 18 })] })]
+                ? [
+                    new Paragraph({
+                      children: [new TextRun({ text: `GSTIN: ${invoice.clientGstin}`, bold: true, size: 18 })],
+                    }),
+                  ]
                 : []),
               ...(invoice.placeOfSupply
-                ? [new Paragraph({ children: [new TextRun({ text: `Place of Supply: ${invoice.placeOfSupply}`, size: 18 })] })]
+                ? [
+                    new Paragraph({
+                      children: [new TextRun({ text: `Place of Supply: ${invoice.placeOfSupply}`, size: 18 })],
+                    }),
+                  ]
                 : []),
             ],
           }),
-          // Dates
+          // Dates & Meta
           new TableCell({
             width: { size: 40, type: WidthType.PERCENTAGE },
             borders: tableBorderNone,
@@ -215,6 +236,24 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                   new TextRun({ text: invoice.dueDate || '-', bold: true, size: 18 }),
                 ],
               }),
+              ...(invoice.placeOfSupply
+                ? [
+                    new Paragraph({
+                      alignment: AlignmentType.RIGHT,
+                      children: [
+                        new TextRun({ text: 'Place Of Supply : ', color: '64748B', size: 18 }),
+                        new TextRun({ text: invoice.placeOfSupply, bold: true, size: 18 }),
+                      ],
+                    }),
+                  ]
+                : []),
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                children: [
+                  new TextRun({ text: 'Reverse Charge : ', color: '64748B', size: 18 }),
+                  new TextRun({ text: invoice.reverseCharge || 'No', bold: true, size: 18 }),
+                ],
+              }),
             ],
           }),
         ],
@@ -227,33 +266,47 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
     children: [
       new TableCell({
         children: [new Paragraph({ text: '#', alignment: AlignmentType.CENTER })],
-        shading: { fill: '232323' },
+        shading: { fill: '1E293B' },
       }),
       new TableCell({
         children: [new Paragraph({ text: 'Item & Description' })],
-        shading: { fill: '232323' },
+        shading: { fill: '1E293B' },
       }),
       new TableCell({
         children: [new Paragraph({ text: 'HSN/SAC' })],
-        shading: { fill: '232323' },
+        shading: { fill: '1E293B' },
       }),
       new TableCell({
         children: [new Paragraph({ text: 'Qty', alignment: AlignmentType.RIGHT })],
-        shading: { fill: '232323' },
+        shading: { fill: '1E293B' },
       }),
       new TableCell({
-        children: [new Paragraph({ text: 'Rate', alignment: AlignmentType.RIGHT })],
-        shading: { fill: '232323' },
+        children: [new Paragraph({ text: 'Rate (₹)', alignment: AlignmentType.RIGHT })],
+        shading: { fill: '1E293B' },
       }),
+      ...(invoice.taxType !== 'NONE'
+        ? [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  text: invoice.taxType === 'IGST' ? 'Tax (IGST)' : 'Tax (GST)',
+                  alignment: AlignmentType.RIGHT,
+                }),
+              ],
+              shading: { fill: '1E293B' },
+            }),
+          ]
+        : []),
       new TableCell({
-        children: [new Paragraph({ text: 'Amount', alignment: AlignmentType.RIGHT })],
-        shading: { fill: '232323' },
+        children: [new Paragraph({ text: 'Amount (₹)', alignment: AlignmentType.RIGHT })],
+        shading: { fill: '1E293B' },
       }),
     ],
   });
 
   const itemRows = (invoice.items || []).map((item, idx) => {
     const itemAmount = (item.quantity || 0) * (item.rate || 0);
+    const itemTax = (itemAmount * (item.taxRate || invoice.taxRate || 0)) / 100;
     return new TableRow({
       children: [
         new TableCell({
@@ -276,6 +329,19 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
           children: [new Paragraph({ text: formatINR(item.rate || 0), alignment: AlignmentType.RIGHT })],
           borders: cellBorderLight,
         }),
+        ...(invoice.taxType !== 'NONE'
+          ? [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    text: `${formatINR(itemTax)} (${item.taxRate || invoice.taxRate || 0}%)`,
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+                borders: cellBorderLight,
+              }),
+            ]
+          : []),
         new TableCell({
           children: [new Paragraph({ text: formatINR(itemAmount), alignment: AlignmentType.RIGHT })],
           borders: cellBorderLight,
@@ -289,7 +355,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
     rows: [itemsHeaderRow, ...itemRows],
   });
 
-  // Summary Table (Total in words & bank details left, amounts right)
+  // Summary Table (Total in words & bank details left, amounts & signature right)
   const summaryTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: tableBorderNone,
@@ -308,7 +374,14 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 children: [new TextRun({ text: invoice.totalInWords || '', italics: true, size: 18 })],
               }),
               new Paragraph({
-                children: [new TextRun({ text: invoice.notes || 'Thanks for your business.', italics: true, size: 18, color: '64748B' })],
+                children: [
+                  new TextRun({
+                    text: invoice.notes || 'Thanks for your business.',
+                    italics: true,
+                    size: 18,
+                    color: '64748B',
+                  }),
+                ],
               }),
               ...(invoice.bankName || invoice.accountNumber
                 ? [
@@ -317,7 +390,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                     }),
                     new Paragraph({
                       children: [
-                        new TextRun({ text: `Account Holder: ${invoice.accountHolderName || ''}\n`, size: 18 }),
+                        new TextRun({ text: `Account Name: ${bankAccountHolder}\n`, bold: true, size: 18 }),
                         new TextRun({ text: `Bank Name: ${invoice.bankName || ''}\n`, size: 18 }),
                         new TextRun({ text: `Account Number: ${invoice.accountNumber || ''}\n`, bold: true, size: 18 }),
                         new TextRun({ text: `IFSC Code: ${invoice.ifscCode || ''}\n`, size: 18 }),
@@ -328,7 +401,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 : []),
             ],
           }),
-          // Right: Subtotal, Tax, Total
+          // Right: Subtotal, Tax, Total, Signatory
           new TableCell({
             width: { size: 40, type: WidthType.PERCENTAGE },
             borders: tableBorderNone,
@@ -337,7 +410,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                 alignment: AlignmentType.RIGHT,
                 children: [
                   new TextRun({ text: 'Sub Total: ', size: 18 }),
-                  new TextRun({ text: formatINR(invoice.subtotal || 0), bold: true, size: 18 }),
+                  new TextRun({ text: `₹${formatINR(invoice.subtotal || 0)}`, bold: true, size: 18 }),
                 ],
               }),
               ...(invoice.taxType === 'IGST'
@@ -346,7 +419,7 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                       alignment: AlignmentType.RIGHT,
                       children: [
                         new TextRun({ text: `IGST (${invoice.taxRate || 18}%): `, size: 18 }),
-                        new TextRun({ text: formatINR(invoice.taxAmount || 0), bold: true, size: 18 }),
+                        new TextRun({ text: `₹${formatINR(invoice.taxAmount || 0)}`, bold: true, size: 18 }),
                       ],
                     }),
                   ]
@@ -357,14 +430,14 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                       alignment: AlignmentType.RIGHT,
                       children: [
                         new TextRun({ text: `CGST (${halfTaxRate}%): `, size: 18 }),
-                        new TextRun({ text: formatINR(halfTaxAmount), bold: true, size: 18 }),
+                        new TextRun({ text: `₹${formatINR(halfTaxAmount)}`, bold: true, size: 18 }),
                       ],
                     }),
                     new Paragraph({
                       alignment: AlignmentType.RIGHT,
                       children: [
                         new TextRun({ text: `SGST (${halfTaxRate}%): `, size: 18 }),
-                        new TextRun({ text: formatINR(halfTaxAmount), bold: true, size: 18 }),
+                        new TextRun({ text: `₹${formatINR(halfTaxAmount)}`, bold: true, size: 18 }),
                       ],
                     }),
                   ]
@@ -387,6 +460,14 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
                   }),
                 ],
               }),
+              new Paragraph({ text: '' }), // Spacer
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                children: [
+                  new TextRun({ text: `For ${sellerBusinessName}\n\n`, bold: true, size: 18 }),
+                  new TextRun({ text: 'Authorised Signatory', size: 18, color: '64748B' }),
+                ],
+              }),
             ],
           }),
         ],
@@ -401,11 +482,22 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
         children: [
           headerTable,
           new Paragraph({ text: '' }),
-          clientAndDatesTable,
+          metaTable,
           new Paragraph({ text: '' }),
           itemsTable,
           new Paragraph({ text: '' }),
           summaryTable,
+          ...(invoice.termsAndConditions
+            ? [
+                new Paragraph({ text: '' }),
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: 'Terms & Conditions:', bold: true, size: 18 }),
+                    new TextRun({ text: `\n${invoice.termsAndConditions}`, size: 16, color: '64748B' }),
+                  ],
+                }),
+              ]
+            : []),
         ],
       },
     ],
@@ -413,11 +505,11 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
 
   const blob = await Packer.toBlob(doc);
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${invoice.invoiceNumber || 'Invoice'}.docx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${invoice.invoiceNumber || 'Invoice'}.docx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }

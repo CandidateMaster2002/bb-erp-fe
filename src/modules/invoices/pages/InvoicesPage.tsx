@@ -20,13 +20,14 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_INVOICE: InvoiceData = {
-  invoiceNumber: 'INV-000367',
-  invoiceDate: new Date().toISOString().split('T')[0],
-  dueDate: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
-  terms: 'Custom',
+  invoiceNumber: 'INV-000602',
+  invoiceDate: '2026-11-23',
+  dueDate: '2026-11-23',
+  terms: 'Due on Receipt',
   status: 'SAVED',
+  reverseCharge: 'No',
 
-  // Biller details (Pre-seeded with user's company template)
+  // Seller details (Verified AGARWAL CREATION GST Details)
   billerName: 'AGARWAL CREATION',
   billerCompany: 'AGARWAL CREATION',
   billerAddress: '185, Chetak Vihar, Agra Road, Jamdoli',
@@ -34,25 +35,27 @@ const DEFAULT_INVOICE: InvoiceData = {
   billerState: 'Rajasthan',
   billerPincode: '302031',
   billerCountry: 'India',
-  billerGstin: '',
+  billerGstin: '08ECMPK5176F1Z8',
   billerPhone: '',
   billerEmail: '',
+  billerStateCode: '08',
 
-  // Client details
+  // Client details (Reference: NORTHSTAR HOMES)
   clientName: '',
-  clientCompany: 'NS PROPERTY GUIDE ADVISORS PRIVATE LIMITED',
-  clientAddress: '',
-  clientCity: '',
+  clientCompany: 'NORTHSTAR HOMES & SPACES PRIVATE LIMITED',
+  clientAddress: 'Hyderabad, Telangana',
+  clientCity: 'Hyderabad',
   clientState: 'Telangana',
   clientPincode: '',
   clientCountry: 'India',
-  clientGstin: '36AAGCN6697K1ZO',
+  clientGstin: '36AAICN4857H1Z3',
   clientPhone: '',
   clientEmail: '',
   placeOfSupply: 'Telangana (36)',
+  clientStateCode: '36',
 
-  // Bank details
-  accountHolderName: 'Shashi Kumar',
+  // Bank details (Trade Name Identity)
+  accountHolderName: 'AGARWAL CREATION',
   bankName: 'State Bank of India (SBI)',
   accountNumber: '61293484821',
   ifscCode: 'SBIN0006827',
@@ -63,21 +66,22 @@ const DEFAULT_INVOICE: InvoiceData = {
   items: [
     {
       id: 'item-1',
-      description: 'AI Automation / IT Services – PropCheck',
+      description:
+        'Website Design & Front-End Development Services for Northstar Homes Official Website (Final Delivery)',
       hsnSac: '998314',
       quantity: 1,
-      rate: 17400,
+      rate: 20000,
       taxRate: 18,
-      amount: 17400,
+      amount: 20000,
     },
   ],
-  subtotal: 17400,
+  subtotal: 20000,
   taxType: 'IGST',
   taxRate: 18,
-  taxAmount: 3132,
-  totalAmount: 20532,
-  balanceDue: 20532,
-  totalInWords: 'Indian Rupee Twenty Thousand Five Hundred Thirty-Two Only',
+  taxAmount: 3600,
+  totalAmount: 23600,
+  balanceDue: 23600,
+  totalInWords: 'Indian Rupee Twenty-Three Thousand Six Hundred Only',
   notes: 'Thanks for your business.',
   termsAndConditions: '',
 };
@@ -89,6 +93,24 @@ export default function InvoicesPage() {
     if (savedDefaults) {
       try {
         const parsed = JSON.parse(savedDefaults);
+        // Sanitize any legacy personal names from previous versions in user's browser storage
+        if (
+          parsed.accountHolderName &&
+          (parsed.accountHolderName.toLowerCase().includes('shashi') ||
+            parsed.accountHolderName.toLowerCase().includes('kumar'))
+        ) {
+          parsed.accountHolderName = 'AGARWAL CREATION';
+        }
+        if (
+          parsed.billerName &&
+          (parsed.billerName.toLowerCase().includes('shashi') ||
+            parsed.billerName.toLowerCase().includes('kumar'))
+        ) {
+          parsed.billerName = 'AGARWAL CREATION';
+        }
+        if (!parsed.billerGstin) {
+          parsed.billerGstin = '08ECMPK5176F1Z8';
+        }
         return {
           ...DEFAULT_INVOICE,
           ...parsed,
@@ -160,6 +182,8 @@ export default function InvoicesPage() {
       clientName: '',
       clientAddress: '',
       clientGstin: '',
+      placeOfSupply: '',
+      clientState: '',
       items: [
         {
           id: Math.random().toString(36).substring(2, 9),

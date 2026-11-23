@@ -25,6 +25,7 @@ export async function exportToPdf(invoice: InvoiceData, elementId = 'invoice-pri
       format: 'a4',
       orientation: 'portrait' as const,
     },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
   };
 
   await (html2pdf() as any).set(opt).from(element).save();

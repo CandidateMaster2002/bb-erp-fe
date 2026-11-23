@@ -27,6 +27,7 @@ export interface InvoiceData {
   billerGstin: string;
   billerPhone: string;
   billerEmail: string;
+  billerStateCode?: string;
 
   // Client details
   clientName: string;
@@ -40,6 +41,8 @@ export interface InvoiceData {
   clientPhone: string;
   clientEmail: string;
   placeOfSupply: string;
+  clientStateCode?: string;
+  reverseCharge?: 'Yes' | 'No' | string;
 
   // Bank details
   accountHolderName: string;

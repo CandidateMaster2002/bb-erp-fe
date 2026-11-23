@@ -1,5 +1,6 @@
 import React from 'react';
 import type { InvoiceData } from '../types';
+import { sanitizeBusinessName } from '../utils/gstUtils';
 
 export function formatINR(val: number): string {
   if (val == null || isNaN(val)) return '0.00';
@@ -16,8 +17,26 @@ interface InvoiceTemplateProps {
 
 export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale = 1 }) => {
   const isCgstSgst = invoice.taxType === 'CGST_SGST';
-  const halfTaxRate = (invoice.taxRate || 0) / 2;
+  const isIgst = invoice.taxType === 'IGST';
+  const halfTaxRate = Number(((invoice.taxRate || 0) / 2).toFixed(2));
   const halfTaxAmount = (invoice.taxAmount || 0) / 2;
+
+  // Seller business trade name (ensuring NO personal proprietor names are displayed)
+  const sellerBusinessName = sanitizeBusinessName(
+    invoice.billerCompany || invoice.billerName,
+    'AGARWAL CREATION'
+  );
+
+  // Bank account name (strictly business trade name)
+  const bankAccountHolder = sanitizeBusinessName(
+    invoice.accountHolderName,
+    sellerBusinessName
+  );
+
+  // Format supplier state display
+  const supplierStateDisplay = invoice.billerState
+    ? `${invoice.billerState}${invoice.billerStateCode ? ` (${invoice.billerStateCode})` : (invoice.billerState.toLowerCase().includes('rajasthan') ? ' (08)' : '')}`
+    : 'Rajasthan (08)';
 
   return (
     <div
@@ -26,39 +45,66 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
       style={{
         width: '210mm',
         minHeight: '297mm',
-        padding: '20mm 18mm',
+        padding: '15mm 16mm',
         boxSizing: 'border-box',
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        fontSize: '13px',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif',
+        fontSize: '12px',
         lineHeight: '1.45',
-        color: '#1e293b',
+        color: '#0f172a',
         transform: scale !== 1 ? `scale(${scale})` : undefined,
         transformOrigin: 'top center',
       }}
     >
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          body {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #invoice-printable-template {
+            box-shadow: none !important;
+            margin: 0 !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            padding: 15mm 16mm !important;
+          }
+        }
+      `}</style>
       {/* Top Header Row */}
-      <div className="flex justify-between items-start pb-6 border-b border-gray-100">
-        {/* Left: Biller Details */}
-        <div className="max-w-[55%]">
-          <h1 className="text-xl font-extrabold tracking-tight text-gray-950 uppercase leading-none">
-            {invoice.billerCompany || invoice.billerName || 'YOUR COMPANY NAME'}
+      <div className="flex justify-between items-start pb-5 border-b border-gray-200">
+        {/* Left: Seller / Business Details */}
+        <div className="max-w-[56%]">
+          <h1 className="text-xl font-black tracking-tight text-gray-950 uppercase leading-tight">
+            {sellerBusinessName}
           </h1>
-          {invoice.billerCompany && invoice.billerName && invoice.billerCompany !== invoice.billerName && (
-            <p className="text-xs font-semibold text-gray-600 mt-0.5">{invoice.billerName}</p>
-          )}
+
           <div className="text-xs text-gray-600 mt-2 space-y-0.5 leading-relaxed">
             {invoice.billerAddress && <p>{invoice.billerAddress}</p>}
             {(invoice.billerCity || invoice.billerState || invoice.billerPincode) && (
               <p>
-                {[invoice.billerCity, invoice.billerState, invoice.billerPincode]
+                {[
+                  invoice.billerCity,
+                  invoice.billerState,
+                  invoice.billerPincode ? `– ${invoice.billerPincode}` : '',
+                ]
                   .filter(Boolean)
                   .join(', ')}
               </p>
             )}
-            {invoice.billerCountry && <p>{invoice.billerCountry}</p>}
+            <p>
+              <span className="text-gray-500 font-medium">State:</span> {supplierStateDisplay}
+            </p>
             {invoice.billerGstin && (
-              <p className="font-medium text-gray-800 pt-0.5">
-                <span className="text-gray-500 font-normal">GSTIN:</span> {invoice.billerGstin}
+              <p className="font-semibold text-gray-900 pt-0.5">
+                <span className="text-gray-500 font-medium">GSTIN:</span>{' '}
+                <span className="font-mono text-gray-950 font-bold">{invoice.billerGstin}</span>
               </p>
             )}
             {invoice.billerPhone && (
@@ -74,21 +120,21 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
           </div>
         </div>
 
-        {/* Right: Tax Invoice Title & Balance Due Banner */}
+        {/* Right: Tax Invoice Title & Balance Due Box */}
         <div className="text-right flex flex-col items-end">
           <h2 className="text-2xl font-black tracking-wider text-gray-950 uppercase">
             TAX INVOICE
           </h2>
-          <p className="text-sm font-semibold text-gray-700 mt-1">
-            # {invoice.invoiceNumber || 'INV-000001'}
+          <p className="text-sm font-bold text-gray-800 mt-1 font-mono">
+            # {invoice.invoiceNumber || 'INV-000602'}
           </p>
 
           {/* Balance Due Highlight Box */}
-          <div className="mt-4 bg-gray-50 border border-gray-200 rounded px-4 py-2 text-right min-w-[170px]">
-            <span className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase block">
+          <div className="mt-3 bg-slate-50 border border-slate-200 rounded px-4 py-2 text-right min-w-[175px]">
+            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block">
               Balance Due
             </span>
-            <span className="text-xl font-extrabold text-gray-950 block mt-0.5">
+            <span className="text-lg font-black text-slate-950 block mt-0.5 font-mono">
               ₹{formatINR(invoice.balanceDue ?? invoice.totalAmount ?? 0)}
             </span>
           </div>
@@ -96,13 +142,13 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
       </div>
 
       {/* Bill To & Invoice Meta Information */}
-      <div className="flex justify-between items-start py-6 border-b border-gray-100">
+      <div className="flex justify-between items-start py-5 border-b border-gray-200">
         {/* Bill To */}
         <div className="max-w-[55%]">
-          <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase block mb-1.5">
+          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block mb-1">
             Bill To
           </span>
-          <h3 className="text-sm font-bold text-blue-900 uppercase">
+          <h3 className="text-sm font-bold text-blue-950 uppercase leading-snug">
             {invoice.clientCompany || invoice.clientName || 'CLIENT COMPANY / NAME'}
           </h3>
           {invoice.clientCompany && invoice.clientName && invoice.clientCompany !== invoice.clientName && (
@@ -117,16 +163,21 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
                   .join(', ')}
               </p>
             )}
-            {invoice.clientCountry && <p>{invoice.clientCountry}</p>}
+            {invoice.clientState && !invoice.clientAddress?.includes(invoice.clientState) && (
+              <p>
+                <span className="text-gray-500">State:</span> {invoice.clientState}
+              </p>
+            )}
             {invoice.clientGstin && (
-              <p className="font-semibold text-gray-800 pt-0.5">
-                <span className="text-gray-500 font-normal">GSTIN:</span> {invoice.clientGstin}
+              <p className="font-semibold text-gray-900 pt-0.5">
+                <span className="text-gray-500 font-normal">GSTIN:</span>{' '}
+                <span className="font-mono text-gray-950">{invoice.clientGstin}</span>
               </p>
             )}
             {invoice.placeOfSupply && (
               <p className="font-medium text-gray-800">
                 <span className="text-gray-500 font-normal">Place Of Supply:</span>{' '}
-                {invoice.placeOfSupply}
+                <span className="font-semibold text-gray-900">{invoice.placeOfSupply}</span>
               </p>
             )}
             {invoice.clientPhone && (
@@ -143,40 +194,50 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
         </div>
 
         {/* Invoice Meta Grid */}
-        <div className="text-right space-y-1.5 text-xs text-gray-700 min-w-[210px]">
+        <div className="text-right space-y-1.5 text-xs text-gray-700 min-w-[220px]">
           <div className="flex justify-between gap-4">
-            <span className="font-medium text-gray-500">Invoice Date :</span>
-            <span className="font-bold text-gray-900">{invoice.invoiceDate || '-'}</span>
+            <span className="font-medium text-slate-500">Invoice Date :</span>
+            <span className="font-bold text-slate-900 font-mono">{invoice.invoiceDate || '-'}</span>
           </div>
           {invoice.terms && (
             <div className="flex justify-between gap-4">
-              <span className="font-medium text-gray-500">Terms :</span>
-              <span className="font-semibold text-gray-800">{invoice.terms}</span>
+              <span className="font-medium text-slate-500">Terms :</span>
+              <span className="font-semibold text-slate-800">{invoice.terms}</span>
             </div>
           )}
           <div className="flex justify-between gap-4">
-            <span className="font-medium text-gray-500">Due Date :</span>
-            <span className="font-bold text-gray-900">{invoice.dueDate || '-'}</span>
+            <span className="font-medium text-slate-500">Due Date :</span>
+            <span className="font-bold text-slate-900 font-mono">{invoice.dueDate || '-'}</span>
+          </div>
+          {invoice.placeOfSupply && (
+            <div className="flex justify-between gap-4">
+              <span className="font-medium text-slate-500">Place Of Supply :</span>
+              <span className="font-semibold text-slate-900">{invoice.placeOfSupply}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-4">
+            <span className="font-medium text-slate-500">Reverse Charge :</span>
+            <span className="font-bold text-slate-900">{invoice.reverseCharge || 'No'}</span>
           </div>
         </div>
       </div>
 
-      {/* Items Table with Classic Zoho Dark Header */}
-      <div className="mt-6">
+      {/* Items Table */}
+      <div className="mt-5">
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr className="bg-[#232323] text-white">
+            <tr className="bg-[#1e293b] text-white">
               <th className="py-2.5 px-3 text-center font-bold uppercase w-10">#</th>
               <th className="py-2.5 px-3 text-left font-bold uppercase">Item & Description</th>
               <th className="py-2.5 px-3 text-left font-bold uppercase w-24">HSN/SAC</th>
-              <th className="py-2.5 px-3 text-right font-bold uppercase w-16">Qty</th>
-              <th className="py-2.5 px-3 text-right font-bold uppercase w-24">Rate</th>
+              <th className="py-2.5 px-3 text-right font-bold uppercase w-14">Qty</th>
+              <th className="py-2.5 px-3 text-right font-bold uppercase w-24">Rate (₹)</th>
               {invoice.taxType !== 'NONE' && (
-                <th className="py-2.5 px-3 text-right font-bold uppercase w-24">
-                  {invoice.taxType === 'IGST' ? 'IGST' : 'GST'}
+                <th className="py-2.5 px-3 text-right font-bold uppercase w-28">
+                  {isIgst ? 'Tax (IGST)' : 'Tax (GST)'}
                 </th>
               )}
-              <th className="py-2.5 px-3 text-right font-bold uppercase w-28">Amount</th>
+              <th className="py-2.5 px-3 text-right font-bold uppercase w-28">Amount (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -185,12 +246,12 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
                 const itemAmount = (item.quantity || 0) * (item.rate || 0);
                 const itemTax = (itemAmount * (item.taxRate || invoice.taxRate || 0)) / 100;
                 return (
-                  <tr key={item.id || idx} className="hover:bg-gray-50/50">
+                  <tr key={item.id || idx} className="hover:bg-slate-50/50">
                     <td className="py-3 px-3 text-center text-gray-500 font-mono font-medium align-top">
                       {idx + 1}
                     </td>
                     <td className="py-3 px-3 text-gray-900 align-top">
-                      <p className="font-semibold text-gray-950 whitespace-pre-line">
+                      <p className="font-semibold text-gray-950 whitespace-pre-line leading-relaxed">
                         {item.description || 'Service / Product item'}
                       </p>
                     </td>
@@ -207,7 +268,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
                       <td className="py-3 px-3 text-right text-gray-800 align-top font-mono">
                         <div>{formatINR(itemTax)}</div>
                         <div className="text-[10px] text-gray-500">
-                          {item.taxRate || invoice.taxRate || 0}%
+                          ({item.taxRate || invoice.taxRate || 0}%)
                         </div>
                       </td>
                     )}
@@ -220,7 +281,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
             ) : (
               <tr>
                 <td colSpan={7} className="py-6 text-center text-gray-400 italic">
-                  No items added yet. Add items using the form on the left.
+                  No items added yet.
                 </td>
               </tr>
             )}
@@ -228,78 +289,79 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
         </table>
       </div>
 
-      {/* Summary Section: Left (In Words & Bank) + Right (Subtotal & Taxes) */}
-      <div className="mt-6 flex justify-between items-start gap-8 pt-4 border-t border-gray-200">
+      {/* Summary Section: Left (In Words & Bank) + Right (Subtotal, Taxes & Signatory) */}
+      <div className="mt-5 flex justify-between items-start gap-8 pt-4 border-t border-gray-200">
         {/* Left Side: Total in Words, Notes, and Bank Details */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 space-y-3.5">
           {/* Total In Words */}
           <div className="text-xs">
             <span className="font-bold text-gray-900 block mb-0.5">Total In Words:</span>
-            <p className="italic text-gray-700 leading-relaxed font-serif">
+            <p className="italic text-gray-800 leading-relaxed font-serif font-medium">
               {invoice.totalInWords || 'Indian Rupee Zero Only'}
             </p>
           </div>
 
-          {/* Friendly Note */}
-          <div className="text-xs text-gray-600 italic">
-            {invoice.notes || 'Thanks for your business.'}
-          </div>
-
           {/* Bank Details Box */}
-          {(invoice.bankName || invoice.accountNumber || invoice.accountHolderName) && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-xs space-y-1 max-w-[340px]">
-              <div className="font-bold text-gray-800 pb-1 border-b border-gray-200 uppercase tracking-wide text-[10px]">
+          {(invoice.bankName || invoice.accountNumber || bankAccountHolder) && (
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs space-y-1 max-w-[340px]">
+              <div className="font-bold text-slate-800 pb-1 border-b border-slate-200 uppercase tracking-wide text-[10px]">
                 Bank Details
               </div>
-              {invoice.accountHolderName && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Account Holder Name:</span>
-                  <span className="font-semibold text-gray-900 text-right">{invoice.accountHolderName}</span>
-                </div>
-              )}
+              <div className="flex justify-between gap-2">
+                <span className="text-slate-500">Account Name:</span>
+                <span className="font-bold text-slate-900 text-right">{bankAccountHolder}</span>
+              </div>
               {invoice.bankName && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Bank Name:</span>
-                  <span className="font-semibold text-gray-900 text-right">{invoice.bankName}</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Bank Name:</span>
+                  <span className="font-semibold text-slate-900 text-right">{invoice.bankName}</span>
                 </div>
               )}
               {invoice.accountNumber && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Account Number:</span>
-                  <span className="font-mono font-bold text-gray-950 text-right">{invoice.accountNumber}</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Account Number:</span>
+                  <span className="font-mono font-bold text-slate-950 text-right">{invoice.accountNumber}</span>
                 </div>
               )}
               {invoice.ifscCode && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">IFSC Code:</span>
-                  <span className="font-mono font-semibold text-gray-900 text-right">{invoice.ifscCode}</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">IFSC Code:</span>
+                  <span className="font-mono font-semibold text-slate-900 text-right">{invoice.ifscCode}</span>
                 </div>
               )}
               {invoice.upiId && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">UPI ID:</span>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">UPI ID:</span>
                   <span className="font-mono font-medium text-emerald-700 text-right">{invoice.upiId}</span>
                 </div>
               )}
             </div>
           )}
+
+          {/* Notes */}
+          {invoice.notes && (
+            <div className="text-xs text-gray-600 italic">
+              {invoice.notes}
+            </div>
+          )}
         </div>
 
-        {/* Right Side: Financial Calculations */}
+        {/* Right Side: Financial Calculations & Authorised Signatory */}
         <div className="w-[280px] shrink-0 text-xs">
           <div className="space-y-2 pb-3">
             <div className="flex justify-between text-gray-600">
               <span className="font-medium">Sub Total</span>
               <span className="font-mono font-semibold text-gray-900">
-                {formatINR(invoice.subtotal || 0)}
+                ₹{formatINR(invoice.subtotal || 0)}
               </span>
             </div>
 
-            {invoice.taxType === 'IGST' && (
+            {/* Dynamic GST Tax Display: Interstate (IGST) vs Intrastate (CGST + SGST) */}
+            {isIgst && (
               <div className="flex justify-between text-gray-600">
                 <span className="font-medium">IGST ({invoice.taxRate || 18}%)</span>
                 <span className="font-mono font-semibold text-gray-900">
-                  {formatINR(invoice.taxAmount || 0)}
+                  ₹{formatINR(invoice.taxAmount || 0)}
                 </span>
               </div>
             )}
@@ -309,13 +371,13 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
                 <div className="flex justify-between text-gray-600">
                   <span className="font-medium">CGST ({halfTaxRate}%)</span>
                   <span className="font-mono font-semibold text-gray-900">
-                    {formatINR(halfTaxAmount)}
+                    ₹{formatINR(halfTaxAmount)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span className="font-medium">SGST ({halfTaxRate}%)</span>
                   <span className="font-mono font-semibold text-gray-900">
-                    {formatINR(halfTaxAmount)}
+                    ₹{formatINR(halfTaxAmount)}
                   </span>
                 </div>
               </>
@@ -329,18 +391,31 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
           </div>
 
           {/* Balance Due Highlight */}
-          <div className="p-2.5 bg-gray-100 rounded flex justify-between items-center text-sm font-extrabold text-gray-950 border border-gray-300">
+          <div className="p-2.5 bg-slate-100 rounded flex justify-between items-center text-sm font-extrabold text-slate-950 border border-slate-300">
             <span>Balance Due</span>
             <span className="font-mono text-base">
               ₹{formatINR(invoice.balanceDue ?? invoice.totalAmount ?? 0)}
             </span>
+          </div>
+
+          {/* Authorised Signatory Section */}
+          <div className="mt-8 text-right">
+            <p className="text-xs font-bold text-gray-900">
+              For {sellerBusinessName}
+            </p>
+            <div className="h-12"></div>
+            <div className="border-t border-gray-400 pt-1 inline-block min-w-[150px] text-center">
+              <span className="text-xs font-semibold text-gray-700">
+                Authorised Signatory
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Terms and Conditions Section */}
       {invoice.termsAndConditions && (
-        <div className="mt-8 pt-4 border-t border-gray-200 text-xs text-gray-500">
+        <div className="mt-6 pt-3 border-t border-gray-200 text-xs text-gray-500">
           <span className="font-bold text-gray-700 block mb-1 uppercase tracking-wider text-[10px]">
             Terms & Conditions
           </span>
