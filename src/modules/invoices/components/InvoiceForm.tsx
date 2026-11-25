@@ -7,6 +7,7 @@ import {
   determineTaxType,
   sanitizeBusinessName,
 } from '../utils/gstUtils';
+import { DEFAULT_SIGNATURE_DATA_URI } from '../assets/signatureDataUri';
 
 interface InvoiceFormProps {
   invoice: InvoiceData;
@@ -129,6 +130,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onChange, onR
       taxType: invoice.taxType,
       taxRate: invoice.taxRate,
       reverseCharge: invoice.reverseCharge || 'No',
+      showSignature: invoice.showSignature !== false,
+      signatureUrl: invoice.signatureUrl || DEFAULT_SIGNATURE_DATA_URI,
     };
     localStorage.setItem('bb_erp_invoice_defaults', JSON.stringify(defaults));
     alert('AGARWAL CREATION business & bank details saved as default template!');
@@ -775,6 +778,72 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoice, onChange, onR
             placeholder="Payment is due upon receipt. All disputes are subject to Jaipur jurisdiction."
           />
         </div>
+      </div>
+
+      {/* 8. Authorised Signatory & Signature */}
+      <div className="bg-gray-50/70 dark:bg-zinc-900/50 p-4 rounded-xl border border-gray-200 dark:border-zinc-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-xs uppercase tracking-wider text-gray-700 dark:text-gray-300">
+            8. Authorised Signatory & Signature
+          </h4>
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={invoice.showSignature !== false}
+              onChange={(e) => onChange({ ...invoice, showSignature: e.target.checked })}
+              className="rounded text-blue-600 focus:ring-blue-500"
+            />
+            <span>Include Signature</span>
+          </label>
+        </div>
+
+        {invoice.showSignature !== false && (
+          <div className="flex items-center gap-4 pt-1">
+            <div className="h-16 w-32 border border-dashed border-gray-300 dark:border-zinc-700 rounded-lg flex items-center justify-center bg-white dark:bg-zinc-800/80 p-1">
+              <img
+                src={invoice.signatureUrl || DEFAULT_SIGNATURE_DATA_URI}
+                alt="Signature preview"
+                className="max-h-full max-w-full object-contain mix-blend-multiply"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700/50 cursor-pointer">
+                  <span>Upload Custom Sign</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const res = event.target?.result as string;
+                        if (res) {
+                          onChange({ ...invoice, signatureUrl: res, showSignature: true });
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                </label>
+                {invoice.signatureUrl && invoice.signatureUrl !== DEFAULT_SIGNATURE_DATA_URI && (
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...invoice, signatureUrl: DEFAULT_SIGNATURE_DATA_URI })}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  >
+                    Reset to Default Sign
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Default signature applied automatically with transparent background.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

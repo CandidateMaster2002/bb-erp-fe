@@ -6,6 +6,7 @@ import { SavedInvoicesDrawer } from '../components/SavedInvoicesDrawer';
 import { exportToPdf, printInvoice } from '../utils/exportPdf';
 import { exportToDocx } from '../utils/exportDocx';
 import { useSaveInvoice } from '../api/invoicesApi';
+import { DEFAULT_SIGNATURE_DATA_URI } from '../assets/signatureDataUri';
 import {
   Download,
   FileDown,
@@ -84,6 +85,8 @@ const DEFAULT_INVOICE: InvoiceData = {
   totalInWords: 'Indian Rupee Twenty-Three Thousand Six Hundred Only',
   notes: 'Thanks for your business.',
   termsAndConditions: '',
+  showSignature: true,
+  signatureUrl: DEFAULT_SIGNATURE_DATA_URI,
 };
 
 export default function InvoicesPage() {
@@ -110,6 +113,12 @@ export default function InvoicesPage() {
         }
         if (!parsed.billerGstin) {
           parsed.billerGstin = '08ECMPK5176F1Z8';
+        }
+        if (parsed.showSignature === undefined) {
+          parsed.showSignature = true;
+        }
+        if (!parsed.signatureUrl) {
+          parsed.signatureUrl = DEFAULT_SIGNATURE_DATA_URI;
         }
         return {
           ...DEFAULT_INVOICE,

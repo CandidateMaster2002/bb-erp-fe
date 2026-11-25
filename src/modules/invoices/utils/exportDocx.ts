@@ -9,10 +9,12 @@ import {
   WidthType,
   BorderStyle,
   Packer,
+  ImageRun,
 } from 'docx';
 import type { InvoiceData } from '../types';
 import { formatINR } from '../components/InvoiceTemplate';
 import { sanitizeBusinessName } from './gstUtils';
+import { DEFAULT_SIGNATURE_DATA_URI } from '../assets/signatureDataUri';
 
 export async function exportToDocx(invoice: InvoiceData): Promise<void> {
   const isCgstSgst = invoice.taxType === 'CGST_SGST';
@@ -28,6 +30,26 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
     invoice.accountHolderName,
     sellerBusinessName
   );
+
+  let signatureImageRun: ImageRun | null = null;
+  if (invoice.showSignature !== false) {
+    try {
+      const sigDataUri = invoice.signatureUrl || DEFAULT_SIGNATURE_DATA_URI;
+      const base64Str = sigDataUri.includes(',') ? sigDataUri.split(',')[1] : sigDataUri;
+      const binaryStr = atob(base64Str);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      signatureImageRun = new ImageRun({
+        data: bytes,
+        transformation: { width: 95, height: 60 },
+        type: 'png',
+      });
+    } catch (e) {
+      console.warn('Failed to attach signature image to docx', e);
+    }
+  }
 
   const tableBorderNone = {
     top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -464,7 +486,10 @@ export async function exportToDocx(invoice: InvoiceData): Promise<void> {
               new Paragraph({
                 alignment: AlignmentType.RIGHT,
                 children: [
-                  new TextRun({ text: `For ${sellerBusinessName}\n\n`, bold: true, size: 18 }),
+                  new TextRun({ text: `For ${sellerBusinessName}\n`, bold: true, size: 18 }),
+                  ...(signatureImageRun
+                    ? [signatureImageRun, new TextRun({ text: '\n' })]
+                    : [new TextRun({ text: '\n\n' })]),
                   new TextRun({ text: 'Authorised Signatory', size: 18, color: '64748B' }),
                 ],
               }),

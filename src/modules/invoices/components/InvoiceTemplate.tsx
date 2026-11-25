@@ -1,6 +1,7 @@
 import React from 'react';
 import type { InvoiceData } from '../types';
 import { sanitizeBusinessName } from '../utils/gstUtils';
+import { DEFAULT_SIGNATURE_DATA_URI } from '../assets/signatureDataUri';
 
 export function formatINR(val: number): string {
   if (val == null || isNaN(val)) return '0.00';
@@ -399,11 +400,19 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, scale
           </div>
 
           {/* Authorised Signatory Section */}
-          <div className="mt-8 text-right">
-            <p className="text-xs font-bold text-gray-900">
+          <div className="mt-6 text-right">
+            <p className="text-xs font-bold text-gray-900 mb-1">
               For {sellerBusinessName}
             </p>
-            <div className="h-12"></div>
+            <div className="h-16 flex items-end justify-end mb-1">
+              {invoice.showSignature !== false && (
+                <img
+                  src={invoice.signatureUrl || DEFAULT_SIGNATURE_DATA_URI}
+                  alt="Authorised Signatory"
+                  className="h-16 max-w-[160px] object-contain mix-blend-multiply"
+                />
+              )}
+            </div>
             <div className="border-t border-gray-400 pt-1 inline-block min-w-[150px] text-center">
               <span className="text-xs font-semibold text-gray-700">
                 Authorised Signatory

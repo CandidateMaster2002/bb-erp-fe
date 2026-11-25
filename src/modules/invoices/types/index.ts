@@ -64,6 +64,10 @@ export interface InvoiceData {
   notes: string;
   termsAndConditions: string;
 
+  // Signatory details
+  signatureUrl?: string;
+  showSignature?: boolean;
+
   createdAt?: string;
   updatedAt?: string;
 }
